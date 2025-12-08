@@ -10,6 +10,12 @@ from typing import List
 import uuid
 from datetime import datetime, timezone
 
+# Import routers
+from routes.auth import router as auth_router
+from routes.apps import router as apps_router
+from routes.streams import router as streams_router
+from routes.api_keys import router as api_keys_router
+from routes.webhooks import router as webhooks_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -20,7 +26,11 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(
+    title="RealCast PaaS API",
+    description="White-Label Real-Time Streaming Platform as a Service",
+    version="1.0.0"
+)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -37,10 +47,22 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
-# Add your routes to the router instead of directly to app
+# Health check and status endpoints
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {
+        "message": "RealCast PaaS API",
+        "version": "1.0.0",
+        "status": "operational"
+    }
+
+@api_router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "database": "connected",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
@@ -66,7 +88,14 @@ async def get_status_checks():
     
     return status_checks
 
-# Include the router in the main app
+# Include all routers
+api_router.include_router(auth_router)
+api_router.include_router(apps_router)
+api_router.include_router(streams_router)
+api_router.include_router(api_keys_router)
+api_router.include_router(webhooks_router)
+
+# Include the main API router in the app
 app.include_router(api_router)
 
 app.add_middleware(
