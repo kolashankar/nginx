@@ -113,8 +113,10 @@ RUN addgroup -S nginx && adduser -S nginx -G nginx && \
 
 # Copy configuration files
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY stat.xsl /etc/nginx/stat.xsl
 COPY scripts/generate-keys.sh /usr/local/bin/generate-keys.sh
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY www/index.html /var/www/html/index.html
 
 RUN chmod +x /usr/local/bin/generate-keys.sh /usr/local/bin/entrypoint.sh
 
