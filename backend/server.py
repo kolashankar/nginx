@@ -9,18 +9,18 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 import uuid
 from datetime import datetime, timezone
+import sys
+
+ROOT_DIR = Path(__file__).parent
+sys.path.insert(0, str(ROOT_DIR))
+load_dotenv(ROOT_DIR / '.env')
 
 # Import routers
-import sys
-sys.path.insert(0, str(ROOT_DIR))
 from routes.auth import router as auth_router
 from routes.apps import router as apps_router
 from routes.streams import router as streams_router
 from routes.api_keys import router as api_keys_router
 from routes.webhooks import router as webhooks_router
-
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
