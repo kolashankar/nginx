@@ -2,16 +2,16 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List
-from ..models.stream import Stream, StreamCreate, StreamUpdate, StreamResponse
-from ..utils.jwt_handler import decode_access_token, create_playback_token
-from ..utils.redis_client import mark_stream_live, mark_stream_offline, is_stream_live, get_stream_viewers
+from models.stream import Stream, StreamCreate, StreamUpdate, StreamResponse
+from utils.jwt_handler import decode_access_token, create_playback_token
+from utils.redis_client import mark_stream_live, mark_stream_offline, is_stream_live, get_stream_viewers
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/streams", tags=["Streams"])
 security = HTTPBearer()
 
 def get_db():
-    from ..server import db
+    from server import db
     return db
 
 async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:

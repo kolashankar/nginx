@@ -10,7 +10,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
 
 def get_db():
-    from ..server import db
+    from server import db
     return db
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -106,7 +106,7 @@ async def get_current_user(
     """
     Get current user info
     """
-    from ..utils.jwt_handler import decode_access_token
+    from utils.jwt_handler import decode_access_token
     
     token = credentials.credentials
     payload = decode_access_token(token)

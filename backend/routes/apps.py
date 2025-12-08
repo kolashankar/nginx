@@ -2,15 +2,15 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List
-from ..models.app import App, AppCreate, AppUpdate, AppResponse
-from ..utils.jwt_handler import decode_access_token
+from models.app import App, AppCreate, AppUpdate, AppResponse
+from utils.jwt_handler import decode_access_token
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/apps", tags=["Apps"])
 security = HTTPBearer()
 
 def get_db():
-    from ..server import db
+    from server import db
     return db
 
 async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
