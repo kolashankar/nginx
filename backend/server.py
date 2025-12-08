@@ -11,6 +11,8 @@ import uuid
 from datetime import datetime, timezone
 
 # Import routers
+import sys
+sys.path.insert(0, str(ROOT_DIR))
 from routes.auth import router as auth_router
 from routes.apps import router as apps_router
 from routes.streams import router as streams_router
