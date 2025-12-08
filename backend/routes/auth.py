@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from ..models.user import User, UserCreate, UserLogin, UserResponse
-from ..utils.password_handler import hash_password, verify_password
-from ..utils.jwt_handler import create_access_token
+from models.user import User, UserCreate, UserLogin, UserResponse
+from utils.password_handler import hash_password, verify_password
+from utils.jwt_handler import create_access_token
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
