@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # NGINX Streaming Engine
+  streaming:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: streaming-engine
+    ports:
+      - "1935:1935"   # RTMP
+      - "8080:8080"   # HTTP/HLS
+      - "8443:8443"   # HTTPS (if configured)
+    environment:
+      # HLS Encryption (optional - leave empty for auto-generation)
+      - HLS_ENCRYPTION_KEY=${HLS_ENCRYPTION_KEY:-}
+      # Webhook endpoints
+      - HTTP_CALLBACK_URL=http://webhook:8000
+    volumes:
+      # Persistent storage for recordings (optional)
+      - ./data/recordings:/tmp/rec
+      # Persistent HLS files (optional)
+      - ./data/hls:/tmp/hls
+      # Custom nginx config (optional override)
+      # - ./custom-nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - streaming-net
+    restart: unless-stopped
+    depends_on:
+      - webhook
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Mock Webhook Handler (Demo Backend)
+  webhook:
+    build:
+      context: ./webhook-handler
+      dockerfile: Dockerfile
+    container_name: webhook-handler
+    ports:
+      - "8000:8000"
+    environment:
+      - ALLOWED_STREAM_KEYS=${ALLOWED_STREAM_KEYS:-demo,test,stream1}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-your_secret_key_here}
+    networks:
+      - streaming-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  streaming-net:
+    driver: bridge
+
+volumes:
+  recordings:
+  hls:
