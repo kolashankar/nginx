@@ -111,6 +111,7 @@ api_router.include_router(monitoring_router)
 api_router.include_router(analytics_router)
 api_router.include_router(billing_router)
 api_router.include_router(teams_router)
+api_router.include_router(branding_router)
 
 # Include the main API router in the app
 app.include_router(api_router)
