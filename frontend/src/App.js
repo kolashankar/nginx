@@ -10,6 +10,11 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Apps from "./pages/Apps";
 import AppDetails from "./pages/AppDetails";
+import Streams from "./pages/Streams";
+import StreamDetails from "./pages/StreamDetails";
+import Webhooks from "./pages/Webhooks";
+import Analytics from "./pages/Analytics";
+import Player from "./pages/Player";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
