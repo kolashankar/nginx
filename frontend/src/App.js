@@ -40,10 +40,13 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="apps" element={<Apps />} />
               <Route path="apps/:appId" element={<AppDetails />} />
-              <Route path="streams" element={<div className="text-center py-12 text-gray-600">Streams page coming soon</div>} />
-              <Route path="api-keys" element={<div className="text-center py-12 text-gray-600">API Keys page coming soon</div>} />
-              <Route path="webhooks" element={<div className="text-center py-12 text-gray-600">Webhooks page coming soon</div>} />
-              <Route path="analytics" element={<div className="text-center py-12 text-gray-600">Analytics page coming soon</div>} />
+              <Route path="streams" element={<Streams />} />
+              <Route path="streams/:id" element={<StreamDetails />} />
+              <Route path="webhooks" element={<Webhooks />} />
+              <Route path="webhooks/:appId" element={<Webhooks />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="analytics/:appId" element={<Analytics />} />
+              <Route path="player/:id" element={<Player />} />
             </Route>
             
             {/* Catch all */}
