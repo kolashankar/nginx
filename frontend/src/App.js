@@ -15,6 +15,7 @@ import StreamDetails from "./pages/StreamDetails";
 import Webhooks from "./pages/Webhooks";
 import Analytics from "./pages/Analytics";
 import Player from "./pages/Player";
+import Branding from "./pages/Branding";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
