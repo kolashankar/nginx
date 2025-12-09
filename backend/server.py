@@ -24,6 +24,10 @@ from routes.webhooks import router as webhooks_router
 from routes.recordings import router as recordings_router
 from routes.transcoding_profiles import router as transcoding_router
 from routes.audit_logs import router as audit_router
+from routes.monitoring import router as monitoring_router
+from routes.advanced_analytics import router as analytics_router
+from routes.billing import router as billing_router
+from routes.teams import router as teams_router
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
