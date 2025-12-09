@@ -28,6 +28,7 @@ from routes.monitoring import router as monitoring_router
 from routes.advanced_analytics import router as analytics_router
 from routes.billing import router as billing_router
 from routes.teams import router as teams_router
+from routes.branding import router as branding_router
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
