@@ -1,526 +1,306 @@
 # RealCast PaaS - Quick Start Guide
 
-Get started with RealCast in 15 minutes! This guide will walk you through creating your first live streaming app.
+## Welcome to RealCast! 🚀
+
+Get your live streaming app up and running in under 10 minutes.
 
 ---
 
-## Table of Contents
+## Step 1: Create an Account (2 minutes)
 
-1. [Prerequisites](#prerequisites)
-2. [Step 1: Create an Account](#step-1-create-an-account)
-3. [Step 2: Create Your First App](#step-2-create-your-first-app)
-4. [Step 3: Generate API Keys](#step-3-generate-api-keys)
-5. [Step 4: Create a Stream](#step-4-create-a-stream)
-6. [Step 5: Start Streaming (OBS)](#step-5-start-streaming-obs)
-7. [Step 6: Build a Player](#step-6-build-a-player)
-8. [Step 7: Add Chat](#step-7-add-chat)
-9. [Next Steps](#next-steps)
+1. Visit [https://dashboard.realcast.io](https://dashboard.realcast.io)
+2. Click **Sign Up**
+3. Enter your email and create a password
+4. Verify your email address
 
 ---
 
-## Prerequisites
+## Step 2: Create Your First App (1 minute)
 
-- Basic knowledge of REST APIs
-- Node.js or Python environment (for SDK)
-- OBS Studio (for streaming)
-- Text editor or IDE
+1. Log in to your dashboard
+2. Click **Create New App**
+3. Enter app details:
+   - **Name:** "My Streaming App"
+   - **Description:** "My first live streaming application"
+4. Click **Create**
 
----
+**You'll receive:**
+- API Key: `ak_live_1234567890abcdef`
+- API Secret: `sk_live_abcdef1234567890`
 
-## Step 1: Create an Account
-
-### Using cURL
-
-```bash
-curl -X POST https://api.realcast.io/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "your@email.com",
-    "password": "SecurePass123!",
-    "full_name": "Your Name"
-  }'
-```
-
-### Using JavaScript SDK
-
-```javascript
-import { RealCastAPI } from '@realcast/sdk';
-
-const api = new RealCastAPI();
-
-const user = await api.auth.register({
-  email: 'your@email.com',
-  password: 'SecurePass123!',
-  fullName: 'Your Name'
-});
-
-console.log('User created:', user.id);
-```
-
-### Response
-
-```json
-{
-  "id": "user_abc123",
-  "email": "your@email.com",
-  "full_name": "Your Name",
-  "created_at": "2024-12-09T10:00:00Z"
-}
-```
+> ⚠️ **Important:** Keep your API Secret secure! Never expose it in client-side code.
 
 ---
 
-## Step 2: Create Your First App
+## Step 3: Create a Stream (1 minute)
 
-Login to get your access token:
+### Via Dashboard:
+1. Go to **Streams** tab
+2. Click **Create Stream**
+3. Fill in details:
+   - **Title:** "My First Stream"
+   - **Quality:** High (1080p)
+4. Copy your **Stream Key** and **Ingest URL**
 
-```bash
-curl -X POST https://api.realcast.io/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "your@email.com",
-    "password": "SecurePass123!"
-  }'
-```
-
-Save the `access_token` from the response.
-
-Now create an app:
-
-```bash
-curl -X POST https://api.realcast.io/api/apps \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My First App",
-    "description": "Testing RealCast",
-    "settings": {
-      "recording_enabled": true,
-      "chat_enabled": true
-    }
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "id": "app_xyz789",
-  "name": "My First App",
-  "description": "Testing RealCast",
-  "user_id": "user_abc123",
-  "created_at": "2024-12-09T10:00:00Z"
-}
-```
-
-✅ Save the `app_id` - you'll need it!
-
----
-
-## Step 3: Generate API Keys
-
-```bash
-curl -X POST https://api.realcast.io/api/api-keys \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "app_id": "app_xyz789",
-    "name": "Production Key",
-    "scopes": ["streams:read", "streams:write", "chat:write"]
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "id": "key_mno789",
-  "app_id": "app_xyz789",
-  "api_key": "rck_live_abc123def456ghi789",
-  "api_secret": "rcs_live_xyz123abc456def789",
-  "created_at": "2024-12-09T10:00:00Z"
-}
-```
-
-⚠️ **IMPORTANT:** Save `api_secret` - it's only shown once!
-
----
-
-## Step 4: Create a Stream
-
+### Via API:
 ```bash
 curl -X POST https://api.realcast.io/api/streams \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "app_id": "app_xyz789",
     "title": "My First Stream",
-    "description": "Testing live streaming"
+    "quality_preset": "high"
   }'
 ```
 
-**Response:**
-
-```json
-{
-  "id": "stream_qwe456",
-  "app_id": "app_xyz789",
-  "title": "My First Stream",
-  "stream_key": "app_xyz789_stream_qwe456_sk_abc123def456",
-  "rtmp_url": "rtmps://ingest.realcast.io/live",
-  "hls_url": "https://cdn.realcast.io/hls/stream_qwe456.m3u8",
-  "status": "created",
-  "created_at": "2024-12-09T10:00:00Z"
-}
-```
-
-✅ Save the `stream_key` and `hls_url`!
-
 ---
 
-## Step 5: Start Streaming (OBS)
+## Step 4: Start Streaming (3 minutes)
 
-1. **Open OBS Studio**
+### Option A: Stream with OBS Studio
 
-2. **Go to Settings > Stream**
-
-3. **Configure:**
-   - Service: `Custom`
+1. **Download OBS:** [obsproject.com](https://obsproject.com/)
+2. **Configure OBS:**
+   - Settings → Stream
+   - Service: Custom
    - Server: `rtmps://ingest.realcast.io/live`
-   - Stream Key: `app_xyz789_stream_qwe456_sk_abc123def456`
+   - Stream Key: `live_abc123_def456`
+3. **Start Streaming:** Click "Start Streaming"
 
-4. **Click "Start Streaming"**
-
-🎉 Your stream is now live!
-
-### Verify Stream Status
+### Option B: Stream with FFmpeg
 
 ```bash
-curl -X GET https://api.realcast.io/api/streams/stream_qwe456/status \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+ffmpeg -i video.mp4 -c:v libx264 -c:a aac \
+  -f flv rtmps://ingest.realcast.io/live/YOUR_STREAM_KEY
 ```
 
-**Response:**
+---
 
-```json
+## Step 5: Watch Your Stream (1 minute)
+
+### Via Browser:
+
+Open this URL in your browser:
+```
+https://cdn.realcast.io/hls/stream_abc123.m3u8
+```
+
+### Via VLC:
+1. Open VLC Media Player
+2. Media → Open Network Stream
+3. Paste your playback URL
+4. Click Play
+
+### Embed in Your Website:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <video id="video" controls width="100%"></video>
+  <script>
+    const video = document.getElementById('video');
+    const hls = new Hls();
+    hls.loadSource('https://cdn.realcast.io/hls/stream_abc123.m3u8');
+    hls.attachMedia(video);
+  </script>
+</body>
+</html>
+```
+
+---
+
+## Step 6: Add Live Chat (2 minutes)
+
+```javascript
+import io from 'socket.io-client';
+
+// Connect to RealCast real-time server
+const socket = io('https://realtime.realcast.io', {
+  auth: {
+    userId: 'user_123',
+    userName: 'John Doe'
+  }
+});
+
+// Join stream chat
+socket.emit('join_channel', { channel_id: 'stream_abc123' });
+
+// Listen for messages
+socket.on('chat_message', (data) => {
+  console.log(`${data.user_name}: ${data.message}`);
+});
+
+// Send message
+socket.emit('send_message', {
+  channel_id: 'stream_abc123',
+  message: 'Hello everyone!'
+});
+```
+
+---
+
+## What's Next?
+
+### Add Advanced Features:
+
+✅ **Webhooks** - Get notified of stream events
+```javascript
+// Receive webhook when stream goes live
+POST https://yourapp.com/webhook
 {
-  "stream_id": "stream_qwe456",
-  "status": "live",
-  "viewer_count": 0,
-  "started_at": "2024-12-09T10:05:00Z"
+  "event": "stream.live",
+  "data": {
+    "stream_id": "stream_abc123",
+    "title": "My First Stream"
+  }
 }
 ```
 
----
-
-## Step 6: Build a Player
-
-Create `player.html`:
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <title>RealCast Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <style>
-    body {
-      margin: 0;
-      background: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    video {
-      width: 80%;
-      max-width: 1280px;
-    }
-  </style>
-</head>
-<body>
-  <video id="video" controls autoplay></video>
-  
-  <script>
-    const video = document.getElementById('video');
-    const hlsUrl = 'https://cdn.realcast.io/hls/stream_qwe456.m3u8';
-    
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-      
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('Stream loaded!');
-      });
-      
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error('HLS Error:', data);
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS support (Safari)
-      video.src = hlsUrl;
-    }
-  </script>
-</body>
-</html>
-```
-
-Open `player.html` in your browser - you should see your live stream!
-
----
-
-## Step 7: Add Chat
-
-Add chat to your player:
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <title>RealCast Player with Chat</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      background: #000;
-      display: flex;
-      height: 100vh;
-      font-family: Arial, sans-serif;
-    }
-    #player {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    video {
-      width: 100%;
-      max-width: 1280px;
-    }
-    #chat {
-      width: 300px;
-      background: #1a1a1a;
-      display: flex;
-      flex-direction: column;
-    }
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-      color: white;
-    }
-    .message {
-      margin-bottom: 10px;
-    }
-    .username {
-      font-weight: bold;
-      color: #00aaff;
-    }
-    #chat-input {
-      display: flex;
-      padding: 10px;
-      background: #2a2a2a;
-    }
-    #message-box {
-      flex: 1;
-      padding: 8px;
-      border: none;
-      background: #3a3a3a;
-      color: white;
-      border-radius: 4px;
-    }
-    #send-btn {
-      margin-left: 10px;
-      padding: 8px 16px;
-      background: #00aaff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <div id="player">
-    <video id="video" controls autoplay></video>
-  </div>
-  
-  <div id="chat">
-    <div id="messages"></div>
-    <div id="chat-input">
-      <input id="message-box" type="text" placeholder="Type a message...">
-      <button id="send-btn">Send</button>
-    </div>
-  </div>
-  
-  <script>
-    // Video player setup
-    const video = document.getElementById('video');
-    const hlsUrl = 'https://cdn.realcast.io/hls/stream_qwe456.m3u8';
-    
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl;
-    }
-    
-    // Chat setup
-    const socket = io('wss://realtime.realcast.io', {
-      auth: {
-        token: 'YOUR_JWT_TOKEN',
-        app_id: 'app_xyz789'
-      }
-    });
-    
-    const streamId = 'stream_qwe456';
-    const userId = 'user_' + Math.random().toString(36).substr(2, 9);
-    const username = 'User' + Math.floor(Math.random() * 1000);
-    
-    socket.on('connect', () => {
-      console.log('Connected to chat');
-      socket.emit('chat:join', {
-        stream_id: streamId,
-        user_id: userId,
-        username: username
-      });
-    });
-    
-    socket.on('chat:message', (data) => {
-      displayMessage(data.username, data.message);
-    });
-    
-    function displayMessage(username, message) {
-      const messagesDiv = document.getElementById('messages');
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message';
-      messageDiv.innerHTML = `<span class="username">${username}:</span> ${message}`;
-      messagesDiv.appendChild(messageDiv);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-    
-    function sendMessage() {
-      const input = document.getElementById('message-box');
-      const message = input.value.trim();
-      
-      if (message) {
-        socket.emit('chat:message', {
-          stream_id: streamId,
-          user_id: userId,
-          username: username,
-          message: message
-        });
-        input.value = '';
-      }
-    }
-    
-    document.getElementById('send-btn').addEventListener('click', sendMessage);
-    document.getElementById('message-box').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-  </script>
-</body>
-</html>
-```
-
-🎉 You now have a complete live streaming app with chat!
-
----
-
-## Next Steps
-
-### Add Webhooks
-
-Get notified when streams start/stop:
-
+✅ **Analytics** - Track viewers and engagement
 ```bash
-curl -X POST https://api.realcast.io/api/webhooks \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "app_id": "app_xyz789",
-    "url": "https://your-app.com/webhooks",
-    "events": ["stream.live", "stream.offline"],
-    "secret": "your_webhook_secret"
-  }'
+curl https://api.realcast.io/api/analytics/app/YOUR_APP_ID/overview \
+  -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
-### Enable Recording
-
-Automatically record streams:
-
+✅ **Recording & VOD** - Save streams automatically
 ```bash
 curl -X POST https://api.realcast.io/api/recordings/start \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    "stream_id": "stream_qwe456",
-    "app_id": "app_xyz789",
-    "stream_url": "rtmp://localhost/live/stream_qwe456"
+    "stream_id": "stream_abc123",
+    "app_id": "app_xyz789"
   }'
 ```
 
-### Use SDKs
+---
 
-Install official SDKs for easier integration:
+## Common Use Cases
 
-```bash
-# JavaScript/TypeScript
-npm install @realcast/sdk
+### 1. Gaming Platform
+```javascript
+// Create stream for gamer
+const stream = await createStream({
+  title: `${gamer.name}'s Gameplay`,
+  game: 'Fortnite',
+  quality: 'high'
+});
 
-# Python
-pip install realcast-sdk
-
-# React
-npm install @realcast/react
+// Show in-game overlay with viewer count
+setInterval(async () => {
+  const data = await getStreamData(stream.id);
+  updateOverlay(data.viewer_count);
+}, 5000);
 ```
 
-### Explore More
+### 2. Education Platform
+```javascript
+// Create class session
+const stream = await createStream({
+  title: 'Math 101 - Algebra Basics',
+  recording: true,  // Save for students who missed it
+  chat: {
+    slowMode: 5,  // 5 seconds between messages
+    moderators: ['teacher_id']
+  }
+});
+```
 
-- 📚 [Full API Documentation](./API.md)
-- 🔌 [WebSocket Events](./WEBSOCKET.md)
-- ⚙️ [Integration Guides](./guides/)
-- 💻 [Code Examples](./examples/)
+### 3. Events & Conferences
+```javascript
+// Multi-stream event
+const streams = await Promise.all([
+  createStream({ title: 'Main Stage' }),
+  createStream({ title: 'Workshop Room A' }),
+  createStream({ title: 'Workshop Room B' })
+]);
+
+// Get combined viewer count
+const totalViewers = streams.reduce(
+  (sum, s) => sum + s.viewer_count, 0
+);
+```
 
 ---
 
 ## Troubleshooting
 
-### Stream not starting?
+### Stream won't start?
+- ✅ Check your stream key is correct
+- ✅ Verify internet upload speed (minimum 5 Mbps)
+- ✅ Ensure port 1935 is not blocked
+- ✅ Try non-secure RTMP first: `rtmp://` instead of `rtmps://`
 
-1. Check stream key is correct
-2. Verify RTMP URL: `rtmps://ingest.realcast.io/live`
-3. Check firewall allows outbound port 1935
-4. Review OBS logs for errors
+### Can't see the stream?
+- ✅ Wait 5-10 seconds after starting stream
+- ✅ Check stream status in dashboard
+- ✅ Verify playback URL is correct
+- ✅ Try a different browser or player
 
-### Player not working?
-
-1. Check HLS URL is accessible
-2. Open browser console for errors
-3. Verify CORS headers are set
-4. Test in different browser
-
-### Chat not connecting?
-
-1. Verify JWT token is valid
-2. Check WebSocket URL
-3. Review browser console for errors
-4. Ensure app_id is correct
+### Poor quality?
+- ✅ Lower OBS bitrate (try 3000 kbps)
+- ✅ Change CPU preset to "veryfast"
+- ✅ Close bandwidth-heavy apps
+- ✅ Use wired connection instead of WiFi
 
 ---
 
-## Support
+## Getting Help
 
-Need help?
+📧 **Email:** support@realcast.io
 
-- 📚 Documentation: https://docs.realcast.io
-- 💬 Discord: https://discord.gg/realcast
-- 📧 Email: support@realcast.io
-- 🐛 Issues: https://github.com/realcast/issues
+📚 **Documentation:** [docs.realcast.io](https://docs.realcast.io)
+
+💬 **Discord:** [discord.gg/realcast](https://discord.gg/realcast)
+
+🐛 **Report Issues:** [github.com/realcast/issues](https://github.com/realcast/issues)
 
 ---
 
-Congratulations! You've built your first live streaming app with RealCast! 🎉
+## Pricing
+
+### Free Tier
+- 1 concurrent stream
+- 50 concurrent viewers
+- 100 GB bandwidth/month
+- Basic analytics
+
+### Starter - $29/month
+- 5 concurrent streams
+- 500 concurrent viewers
+- 500 GB bandwidth/month
+- Recording & VOD
+- Advanced analytics
+
+### Pro - $99/month
+- 20 concurrent streams
+- 2,000 concurrent viewers
+- 2 TB bandwidth/month
+- All Starter features
+- Custom transcoding
+- Priority support
+
+### Enterprise - Custom
+- Unlimited streams
+- Unlimited viewers
+- Unlimited bandwidth
+- White-label solution
+- Dedicated support
+- SLA guarantee
+
+[View detailed pricing →](https://realcast.io/pricing)
+
+---
+
+## Welcome aboard! 🎉
+
+You're now ready to build amazing streaming experiences with RealCast!
+
+**Next steps:**
+- [Complete Integration Guide →](./guides/REACT_INTEGRATION.md)
+- [API Reference →](./API.md)
+- [Best Practices →](./BEST_PRACTICES.md)
