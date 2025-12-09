@@ -48,6 +48,7 @@ function App() {
               <Route path="analytics" element={<Analytics />} />
               <Route path="analytics/:appId" element={<Analytics />} />
               <Route path="player/:id" element={<Player />} />
+              <Route path="branding/:appId" element={<Branding />} />
             </Route>
             
             {/* Catch all */}
