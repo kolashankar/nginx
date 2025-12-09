@@ -1,276 +1,270 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Badge } from '../components/ui/badge';
-import { appsAPI, streamsAPI } from '../utils/api';
-import { Plus, Video, Circle, ArrowRight, Copy, Check } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
+import DashboardLayout from '../components/DashboardLayout';
+import { Play, Square, Copy, Eye, Clock, CheckCircle, XCircle, Plus } from 'lucide-react';
 
 const Streams = () => {
-  const [apps, setApps] = useState([]);
-  const [selectedApp, setSelectedApp] = useState(null);
+  const navigate = useNavigate();
   const [streams, setStreams] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ title: '', description: '' });
-  const [creating, setCreating] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [apps, setApps] = useState([]);
+  const [formData, setFormData] = useState({
+    app_id: '',
+    title: '',
+    description: '',
+    quality: '1080p',
+    record: true
+  });
 
   useEffect(() => {
+    fetchStreams();
     fetchApps();
   }, []);
 
-  useEffect(() => {
-    if (selectedApp) {
-      fetchStreams(selectedApp);
+  const fetchStreams = async () => {
+    try {
+      const response = await api.get('/streams');
+      setStreams(response.data.streams || []);
+    } catch (error) {
+      console.error('Error fetching streams:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [selectedApp]);
+  };
 
   const fetchApps = async () => {
     try {
-      const response = await appsAPI.list();
-      setApps(response.data);
-      if (response.data.length > 0) {
-        setSelectedApp(response.data[0].id);
-      }
+      const response = await api.get('/apps');
+      setApps(response.data.apps || []);
     } catch (error) {
-      toast.error('Failed to fetch apps');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching apps:', error);
     }
   };
 
-  const fetchStreams = async (appId) => {
-    try {
-      setLoading(true);
-      const response = await streamsAPI.list(appId);
-      setStreams(response.data);
-    } catch (error) {
-      toast.error('Failed to fetch streams');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateStream = async (e) => {
+  const createStream = async (e) => {
     e.preventDefault();
-    if (!selectedApp) {
-      toast.error('Please select an app first');
-      return;
-    }
-
-    setCreating(true);
     try {
-      await streamsAPI.create(selectedApp, formData);
-      toast.success('Stream created successfully!');
-      setCreateDialogOpen(false);
-      setFormData({ title: '', description: '' });
-      fetchStreams(selectedApp);
+      await api.post('/streams', formData);
+      setShowCreateModal(false);
+      setFormData({ app_id: '', title: '', description: '', quality: '1080p', record: true });
+      fetchStreams();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create stream');
-    } finally {
-      setCreating(false);
+      alert('Error creating stream: ' + (error.response?.data?.detail || error.message));
     }
   };
 
-  const copyToClipboard = (text, id) => {
+  const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    setCopiedKey(id);
-    toast.success('Copied to clipboard!');
-    setTimeout(() => setCopiedKey(null), 2000);
+    alert('Copied to clipboard!');
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      live: { variant: 'default', color: 'bg-green-500', text: 'Live' },
-      offline: { variant: 'secondary', color: 'bg-gray-500', text: 'Offline' },
-      ended: { variant: 'outline', color: 'bg-red-500', text: 'Ended' }
-    };
-
-    const config = statusConfig[status] || statusConfig.offline;
-    
-    return (
-      <Badge variant={config.variant} className="gap-1">
-        <Circle className={`w-2 h-2 ${config.color}`} fill="currentColor" />
-        {config.text}
-      </Badge>
-    );
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'live':
+        return 'bg-green-100 text-green-800';
+      case 'offline':
+        return 'bg-gray-100 text-gray-800';
+      case 'ended':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  if (loading && apps.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'live':
+        return <Play className="w-4 h-4" />;
+      case 'offline':
+        return <Square className="w-4 h-4" />;
+      case 'ended':
+        return <CheckCircle className="w-4 h-4" />;
+      default:
+        return <XCircle className="w-4 h-4" />;
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Streams</h1>
-          <p className="text-gray-600 mt-1">Manage your live streams</p>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Streams</h1>
+            <p className="text-gray-600 mt-1">Manage your live streams and recordings</p>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Create Stream
+          </button>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button disabled={!selectedApp}>
-              <Plus className="w-4 h-4 mr-2" />
+
+        {/* Streams List */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          </div>
+        ) : streams.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
+            <Play className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No streams yet</h3>
+            <p className="text-gray-600 mb-4">Create your first stream to get started</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            >
               Create Stream
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Stream</DialogTitle>
-              <DialogDescription>
-                Create a new live stream for your app
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateStream} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Stream Title</Label>
-                <Input
-                  id="title"
-                  placeholder="My Live Stream"
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {streams.map((stream) => (
+              <div
+                key={stream.id}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate(`/streams/${stream.id}`)}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{stream.title}</h3>
+                    <p className="text-sm text-gray-600">{stream.description || 'No description'}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(stream.status)}`}>
+                    {getStatusIcon(stream.status)}
+                    {stream.status}
+                  </span>
+                </div>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Eye className="w-4 h-4" />
+                    <span>{stream.viewer_count || 0} viewers</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Clock className="w-4 h-4" />
+                    <span>Created {new Date(stream.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Stream Key</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(stream.stream_key);
+                      }}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <code className="text-xs text-gray-700 bg-gray-50 px-2 py-1 rounded mt-1 block truncate">
+                    {stream.stream_key}
+                  </code>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Create Stream Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4">Create New Stream</h2>
+            <form onSubmit={createStream} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">App</label>
+                <select
+                  value={formData.app_id}
+                  onChange={(e) => setFormData({ ...formData, app_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Select an app</option>
+                  {apps.map((app) => (
+                    <option key={app.id} value={app.id}>
+                      {app.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  placeholder="Stream description"
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quality</label>
+                <select
+                  value={formData.quality}
+                  onChange={(e) => setFormData({ ...formData, quality: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="1080p">1080p (Full HD)</option>
+                  <option value="720p">720p (HD)</option>
+                  <option value="480p">480p (SD)</option>
+                  <option value="360p">360p (Low)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="record"
+                  checked={formData.record}
+                  onChange={(e) => setFormData({ ...formData, record: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="record" className="ml-2 text-sm text-gray-700">
+                  Enable recording
+                </label>
+              </div>
+
               <div className="flex gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)} className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
                   Cancel
-                </Button>
-                <Button type="submit" disabled={creating} className="flex-1">
-                  {creating ? 'Creating...' : 'Create Stream'}
-                </Button>
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Stream
+                </button>
               </div>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {apps.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Video className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No apps found</h3>
-            <p className="text-gray-600 mb-4">Create an app first to start streaming</p>
-            <Link to="/apps">
-              <Button>Go to Apps</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="flex gap-4 items-center">
-            <Label htmlFor="app-select" className="text-sm font-medium">Select App:</Label>
-            <Select value={selectedApp} onValueChange={setSelectedApp}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Select an app" />
-              </SelectTrigger>
-              <SelectContent>
-                {apps.map((app) => (
-                  <SelectItem key={app.id} value={app.id}>
-                    {app.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : streams.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Video className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No streams yet</h3>
-                <p className="text-gray-600 mb-4">Create your first stream to get started</p>
-                <Button onClick={() => setCreateDialogOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Stream
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {streams.map((stream) => (
-                <Card key={stream.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{stream.title || 'Untitled Stream'}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {stream.description || 'No description'}
-                        </CardDescription>
-                      </div>
-                      {getStatusBadge(stream.status)}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs text-gray-500">Stream Key</Label>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(stream.stream_key, `key-${stream.id}`)}
-                          className="h-6 px-2"
-                        >
-                          {copiedKey === `key-${stream.id}` ? (
-                            <Check className="w-3 h-3" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </Button>
-                      </div>
-                      <code className="block text-xs bg-gray-100 p-2 rounded border break-all">
-                        {stream.stream_key}
-                      </code>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                      <div>
-                        <p className="text-xs text-gray-500">Viewers</p>
-                        <p className="text-lg font-semibold">{stream.viewer_count || 0}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Duration</p>
-                        <p className="text-lg font-semibold">{stream.duration || '0m'}</p>
-                      </div>
-                    </div>
-
-                    <Link to={`/streams/${stream.id}`} className="block">
-                      <Button variant="outline" className="w-full mt-2">
-                        View Details
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </>
+        </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 };
 
