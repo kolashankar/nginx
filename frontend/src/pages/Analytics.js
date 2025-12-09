@@ -1,314 +1,288 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Label } from '../components/ui/label';
-import { appsAPI, analyticsAPI } from '../utils/api';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, Clock, Video, TrendingUp, Database } from 'lucide-react';
-import { toast } from 'sonner';
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+import { useParams } from 'react-router-dom';
+import api from '../utils/api';
+import DashboardLayout from '../components/DashboardLayout';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { TrendingUp, Users, Clock, Activity, Download, Calendar } from 'lucide-react';
 
 const Analytics = () => {
-  const [apps, setApps] = useState([]);
-  const [selectedApp, setSelectedApp] = useState(null);
+  const { appId } = useParams();
+  const [analytics, setAnalytics] = useState(null);
   const [timeRange, setTimeRange] = useState('7d');
   const [loading, setLoading] = useState(true);
-  const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
-    fetchApps();
-  }, []);
+    fetchAnalytics();
+  }, [appId, timeRange]);
 
-  useEffect(() => {
-    if (selectedApp) {
-      fetchAnalytics(selectedApp, timeRange);
-    }
-  }, [selectedApp, timeRange]);
-
-  const fetchApps = async () => {
+  const fetchAnalytics = async () => {
+    setLoading(true);
     try {
-      const response = await appsAPI.list();
-      setApps(response.data);
-      if (response.data.length > 0) {
-        setSelectedApp(response.data[0].id);
-      }
-    } catch (error) {
-      toast.error('Failed to fetch apps');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAnalytics = async (appId, range) => {
-    try {
-      setLoading(true);
-      const response = await analyticsAPI.getOverview(appId, range);
+      const endpoint = appId
+        ? `/advanced-analytics/apps/${appId}/overview?time_range=${timeRange}`
+        : `/advanced-analytics/overview?time_range=${timeRange}`;
+      const response = await api.get(endpoint);
       setAnalytics(response.data);
     } catch (error) {
-      toast.error('Failed to fetch analytics');
-      // Set mock data for demonstration
-      setAnalytics({
-        total_streams: 15,
-        total_viewers: 1234,
-        total_duration: 450,
-        bandwidth_used: 145.6,
-        peak_concurrent: 89,
-        avg_watch_time: 12.5,
-        viewer_trend: [
-          { date: 'Mon', viewers: 45 },
-          { date: 'Tue', viewers: 67 },
-          { date: 'Wed', viewers: 89 },
-          { date: 'Thu', viewers: 56 },
-          { date: 'Fri', viewers: 78 },
-          { date: 'Sat', viewers: 95 },
-          { date: 'Sun', viewers: 82 }
-        ],
-        stream_duration: [
-          { name: 'Short (< 10m)', value: 30 },
-          { name: 'Medium (10-30m)', value: 45 },
-          { name: 'Long (> 30m)', value: 25 }
-        ],
-        bandwidth_trend: [
-          { date: 'Mon', bandwidth: 12 },
-          { date: 'Tue', bandwidth: 19 },
-          { date: 'Wed', bandwidth: 25 },
-          { date: 'Thu', bandwidth: 18 },
-          { date: 'Fri', bandwidth: 22 },
-          { date: 'Sat', bandwidth: 28 },
-          { date: 'Sun', bandwidth: 24 }
-        ]
-      });
+      console.error('Error fetching analytics:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && apps.length === 0) {
+  const timeRangeOptions = [
+    { value: '24h', label: 'Last 24 Hours' },
+    { value: '7d', label: 'Last 7 Days' },
+    { value: '30d', label: 'Last 30 Days' },
+    { value: '90d', label: 'Last 90 Days' }
+  ];
+
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </DashboardLayout>
     );
   }
 
+  // Mock data for demonstration (replace with actual API data)
+  const viewerData = [
+    { time: '00:00', viewers: 120 },
+    { time: '04:00', viewers: 80 },
+    { time: '08:00', viewers: 200 },
+    { time: '12:00', viewers: 350 },
+    { time: '16:00', viewers: 420 },
+    { time: '20:00', viewers: 380 },
+    { time: '24:00', viewers: 250 }
+  ];
+
+  const bandwidthData = [
+    { date: 'Mon', bandwidth: 45 },
+    { date: 'Tue', bandwidth: 52 },
+    { date: 'Wed', bandwidth: 61 },
+    { date: 'Thu', bandwidth: 58 },
+    { date: 'Fri', bandwidth: 70 },
+    { date: 'Sat', bandwidth: 85 },
+    { date: 'Sun', bandwidth: 78 }
+  ];
+
+  const streamQualityData = [
+    { name: '1080p', value: 45 },
+    { name: '720p', value: 30 },
+    { name: '480p', value: 20 },
+    { name: '360p', value: 5 }
+  ];
+
+  const chatActivityData = [
+    { hour: '00:00', messages: 45 },
+    { hour: '04:00', messages: 20 },
+    { hour: '08:00', messages: 120 },
+    { hour: '12:00', messages: 250 },
+    { hour: '16:00', messages: 380 },
+    { hour: '20:00', messages: 420 },
+    { hour: '24:00', messages: 180 }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-600 mt-1">Monitor your streaming performance and usage</p>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+            <p className="text-gray-600 mt-1">Monitor your streaming performance and engagement</p>
+          </div>
+          <div className="flex gap-3">
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {timeRangeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+          </div>
         </div>
-      </div>
 
-      {apps.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Activity className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No apps found</h3>
-            <p className="text-gray-600">Create an app to view analytics</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="flex gap-4 items-center">
-            <div className="flex gap-4 items-center flex-1">
-              <Label htmlFor="app-select" className="text-sm font-medium">App:</Label>
-              <Select value={selectedApp} onValueChange={setSelectedApp}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Select an app" />
-                </SelectTrigger>
-                <SelectContent>
-                  {apps.map((app) => (
-                    <SelectItem key={app.id} value={app.id}>
-                      {app.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-600">Total Views</div>
+              <TrendingUp className="w-5 h-5 text-blue-600" />
             </div>
-
-            <div className="flex gap-4 items-center">
-              <Label htmlFor="time-range" className="text-sm font-medium">Time Range:</Label>
-              <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">Last 24 Hours</SelectItem>
-                  <SelectItem value="7d">Last 7 Days</SelectItem>
-                  <SelectItem value="30d">Last 30 Days</SelectItem>
-                  <SelectItem value="90d">Last 90 Days</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="text-3xl font-bold text-gray-900 mb-1">
+              {analytics?.total_views?.toLocaleString() || '12,458'}
+            </div>
+            <div className="text-sm text-green-600 flex items-center gap-1">
+              <span>↑ 12.5%</span>
+              <span className="text-gray-500">vs last period</span>
             </div>
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-600">Peak Viewers</div>
+              <Users className="w-5 h-5 text-green-600" />
             </div>
-          ) : analytics ? (
-            <>
-              {/* Key Metrics */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Streams</CardTitle>
-                    <Video className="h-4 w-4 text-gray-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{analytics.total_streams}</div>
-                    <p className="text-xs text-gray-500 mt-1">Live sessions created</p>
-                  </CardContent>
-                </Card>
+            <div className="text-3xl font-bold text-gray-900 mb-1">
+              {analytics?.peak_viewers?.toLocaleString() || '2,847'}
+            </div>
+            <div className="text-sm text-green-600 flex items-center gap-1">
+              <span>↑ 8.2%</span>
+              <span className="text-gray-500">vs last period</span>
+            </div>
+          </div>
 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Viewers</CardTitle>
-                    <Users className="h-4 w-4 text-gray-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{analytics.total_viewers.toLocaleString()}</div>
-                    <p className="text-xs text-gray-500 mt-1">Peak: {analytics.peak_concurrent}</p>
-                  </CardContent>
-                </Card>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-600">Avg Watch Time</div>
+              <Clock className="w-5 h-5 text-purple-600" />
+            </div>
+            <div className="text-3xl font-bold text-gray-900 mb-1">
+              {analytics?.avg_watch_time || '24m'}
+            </div>
+            <div className="text-sm text-red-600 flex items-center gap-1">
+              <span>↓ 3.1%</span>
+              <span className="text-gray-500">vs last period</span>
+            </div>
+          </div>
 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Watch Time</CardTitle>
-                    <Clock className="h-4 w-4 text-gray-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{analytics.total_duration}h</div>
-                    <p className="text-xs text-gray-500 mt-1">Avg: {analytics.avg_watch_time}m</p>
-                  </CardContent>
-                </Card>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-600">Bandwidth Used</div>
+              <Activity className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="text-3xl font-bold text-gray-900 mb-1">
+              {analytics?.bandwidth_used || '1.2 TB'}
+            </div>
+            <div className="text-sm text-green-600 flex items-center gap-1">
+              <span>↑ 15.3%</span>
+              <span className="text-gray-500">vs last period</span>
+            </div>
+          </div>
+        </div>
 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Bandwidth</CardTitle>
-                    <Database className="h-4 w-4 text-gray-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{analytics.bandwidth_used} GB</div>
-                    <p className="text-xs text-gray-500 mt-1">Data transferred</p>
-                  </CardContent>
-                </Card>
-              </div>
+        {/* Viewer Trend Chart */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold mb-4">Concurrent Viewers</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={viewerData}>
+              <defs>
+                <linearGradient id="colorViewers" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="time" stroke="#6B7280" />
+              <YAxis stroke="#6B7280" />
+              <Tooltip />
+              <Area type="monotone" dataKey="viewers" stroke="#3B82F6" fillOpacity={1} fill="url(#colorViewers)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
 
-              {/* Charts */}
-              <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Viewer Trend</CardTitle>
-                    <CardDescription>Daily viewer count over time</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={analytics.viewer_trend}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="viewers" stroke="#3b82f6" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
+        {/* Bandwidth Usage */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold mb-4">Bandwidth Usage (GB)</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={bandwidthData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="date" stroke="#6B7280" />
+                <YAxis stroke="#6B7280" />
+                <Tooltip />
+                <Bar dataKey="bandwidth" fill="#10B981" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Bandwidth Usage</CardTitle>
-                    <CardDescription>Daily bandwidth consumption (GB)</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={analytics.bandwidth_trend}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="bandwidth" fill="#10b981" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold mb-4">Stream Quality Distribution</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={streamQualityData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {streamQualityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Stream Duration Distribution</CardTitle>
-                    <CardDescription>Breakdown by stream length</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={analytics.stream_duration}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {analytics.stream_duration.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
+        {/* Chat Activity */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold mb-4">Chat Activity</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chatActivityData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="hour" stroke="#6B7280" />
+              <YAxis stroke="#6B7280" />
+              <Tooltip />
+              <Line type="monotone" dataKey="messages" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Performance Summary</CardTitle>
-                    <CardDescription>Key performance indicators</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between pb-2 border-b">
-                        <span className="text-sm text-gray-600">Average Stream Duration</span>
-                        <span className="text-sm font-semibold">{(analytics.total_duration / analytics.total_streams).toFixed(1)}h</span>
-                      </div>
-                      <div className="flex items-center justify-between pb-2 border-b">
-                        <span className="text-sm text-gray-600">Average Viewers per Stream</span>
-                        <span className="text-sm font-semibold">{Math.round(analytics.total_viewers / analytics.total_streams)}</span>
-                      </div>
-                      <div className="flex items-center justify-between pb-2 border-b">
-                        <span className="text-sm text-gray-600">Peak Concurrent Viewers</span>
-                        <span className="text-sm font-semibold">{analytics.peak_concurrent}</span>
-                      </div>
-                      <div className="flex items-center justify-between pb-2 border-b">
-                        <span className="text-sm text-gray-600">Bandwidth per Stream</span>
-                        <span className="text-sm font-semibold">{(analytics.bandwidth_used / analytics.total_streams).toFixed(2)} GB</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Average Watch Time</span>
-                        <span className="text-sm font-semibold">{analytics.avg_watch_time} minutes</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Activity className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No analytics data</h3>
-                <p className="text-gray-600">Start streaming to see analytics</p>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-    </div>
+        {/* Top Streams Table */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold mb-4">Top Performing Streams</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Stream Title</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Peak Viewers</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Duration</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Chat Messages</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { title: 'Product Launch Live', viewers: 2847, duration: '2h 15m', messages: 5420, date: '2024-12-08' },
+                  { title: 'Weekly Q&A Session', viewers: 1523, duration: '1h 30m', messages: 3201, date: '2024-12-07' },
+                  { title: 'Gaming Tournament Finals', viewers: 4102, duration: '3h 45m', messages: 8935, date: '2024-12-06' },
+                  { title: 'Coding Workshop', viewers: 892, duration: '2h 00m', messages: 1456, date: '2024-12-05' },
+                  { title: 'Music Concert', viewers: 3215, duration: '2h 30m', messages: 6782, date: '2024-12-04' }
+                ].map((stream, index) => (
+                  <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 text-sm text-gray-900">{stream.title}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{stream.viewers.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{stream.duration}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{stream.messages.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{stream.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
