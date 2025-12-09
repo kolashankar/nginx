@@ -99,6 +99,9 @@ api_router.include_router(apps_router)
 api_router.include_router(streams_router)
 api_router.include_router(api_keys_router)
 api_router.include_router(webhooks_router)
+api_router.include_router(recordings_router)
+api_router.include_router(transcoding_router)
+api_router.include_router(audit_router)
 
 # Include the main API router in the app
 app.include_router(api_router)
