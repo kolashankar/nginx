@@ -586,17 +586,18 @@ To add:
 **Files created**:
 - `backend/routes/billing.py` ✅
 
-#### 6.4 White-Label Customization
-- [ ] Custom branding per tenant
-- [ ] Custom domain support
-- [ ] Logo and color scheme customization
-- [ ] Email template customization
-- [ ] Custom player themes
+#### 6.4 White-Label Customization ✅
+- [x] Custom branding per tenant
+- [x] Custom domain support
+- [x] Logo and color scheme customization
+- [x] Email template customization
+- [x] Custom player themes
+- [x] CSS export functionality
 
-**Files to create**:
-- `backend/routes/branding.py`
-- `backend/models/branding.py`
-- `frontend/src/pages/Branding.js`
+**Files created**:
+- `backend/routes/branding.py` ✅
+- `backend/models/branding.py` ✅
+- `frontend/src/pages/Branding.js` ✅
 
 #### 6.5 Advanced Chat Features
 - [ ] Chat reactions and emojis
