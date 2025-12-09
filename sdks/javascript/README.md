@@ -1,4 +1,4 @@
-# RealCast JavaScript/TypeScript SDK
+# RealCast JavaScript SDK
 
 Official JavaScript/TypeScript SDK for RealCast PaaS.
 
@@ -6,384 +6,283 @@ Official JavaScript/TypeScript SDK for RealCast PaaS.
 
 ```bash
 npm install @realcast/sdk
-# or
+```
+
+Or with yarn:
+```bash
 yarn add @realcast/sdk
 ```
 
 ## Quick Start
 
-```typescript
-import { RealCastAPI, RealCastChat } from '@realcast/sdk';
+```javascript
+import { RealCastClient } from '@realcast/sdk';
 
-// Initialize API client
-const api = new RealCastAPI({
-  apiKey: 'your_api_key',
-  apiSecret: 'your_api_secret'
+const client = new RealCastClient({
+  apiKey: 'ak_live_your_api_key',
+  apiSecret: 'sk_live_your_secret'
 });
 
 // Create a stream
-const stream = await api.streams.create({
+const stream = await client.streams.create({
   appId: 'app_xyz789',
   title: 'My Live Stream',
-  description: 'Gaming session'
+  quality: 'high'
 });
 
-console.log('Stream Key:', stream.streamKey);
-console.log('HLS URL:', stream.hlsUrl);
-
-// Initialize chat
-const chat = new RealCastChat({
-  streamId: stream.id,
-  userId: 'user_123',
-  username: 'GamerPro',
-  token: 'jwt_token'
-});
-
-// Listen for messages
-chat.on('message', (data) => {
-  console.log(`${data.username}: ${data.message}`);
-});
-
-// Send message
-chat.sendMessage('Hello everyone!');
+console.log('Stream created:', stream.streamKey);
+console.log('Playback URL:', stream.playbackUrl);
 ```
 
 ## API Reference
 
-### RealCastAPI
+### Initialize Client
 
-#### Constructor
-
-```typescript
-const api = new RealCastAPI({
-  apiKey: string,
-  apiSecret: string,
-  baseUrl?: string  // default: https://api.realcast.io/api
+```javascript
+const client = new RealCastClient({
+  apiKey: 'your_api_key',
+  apiSecret: 'your_api_secret',
+  baseUrl: 'https://api.realcast.io/api'  // Optional
 });
 ```
 
-#### Authentication
+### Streams
 
-```typescript
-// Register
-const user = await api.auth.register({
-  email: 'user@example.com',
-  password: 'SecurePass123!',
-  fullName: 'John Doe'
+#### Create Stream
+```javascript
+const stream = await client.streams.create({
+  appId: 'app_id',
+  title: 'Stream Title',
+  description: 'Stream Description',
+  quality: 'high'  // 'low', 'medium', 'high', 'ultra'
 });
-
-// Login
-const { accessToken, user } = await api.auth.login({
-  email: 'user@example.com',
-  password: 'SecurePass123!'
-});
-
-// Get current user
-const user = await api.auth.getCurrentUser(accessToken);
 ```
 
-#### Apps
-
-```typescript
-// Create app
-const app = await api.apps.create({
-  name: 'My App',
-  description: 'Live streaming app',
-  settings: {
-    recordingEnabled: true,
-    chatEnabled: true
-  }
-}, accessToken);
-
-// List apps
-const apps = await api.apps.list(accessToken);
-
-// Get app
-const app = await api.apps.get(appId, accessToken);
-
-// Update app
-const app = await api.apps.update(appId, {
-  name: 'Updated Name'
-}, accessToken);
-
-// Delete app
-await api.apps.delete(appId, accessToken);
+#### Get Stream
+```javascript
+const stream = await client.streams.get('stream_id');
+console.log('Status:', stream.status);
+console.log('Viewers:', stream.viewerCount);
 ```
 
-#### Streams
-
-```typescript
-// Create stream
-const stream = await api.streams.create({
-  appId: 'app_xyz789',
-  title: 'My Stream',
-  description: 'Stream description',
-  settings: {
-    recording: true
-  }
-}, accessToken);
-
-// List streams
-const streams = await api.streams.list({
-  appId: 'app_xyz789',
+#### List Streams
+```javascript
+const streams = await client.streams.list({
+  appId: 'app_id',
+  status: 'live',  // Optional: 'live', 'offline', 'all'
   limit: 50,
-  skip: 0
-}, accessToken);
-
-// Get stream
-const stream = await api.streams.get(streamId, accessToken);
-
-// Get stream status
-const status = await api.streams.getStatus(streamId, accessToken);
-// Returns: { status: 'live', viewerCount: 123, startedAt: '...' }
-
-// Generate playback token
-const token = await api.streams.generatePlaybackToken(streamId, {
-  viewerId: 'viewer_123',
-  expiryMinutes: 60
-}, accessToken);
-
-// Update stream
-const stream = await api.streams.update(streamId, {
-  title: 'Updated Title'
-}, accessToken);
-
-// Delete stream
-await api.streams.delete(streamId, accessToken);
-```
-
-#### API Keys
-
-```typescript
-// Create API key
-const key = await api.apiKeys.create({
-  appId: 'app_xyz789',
-  name: 'Production Key',
-  scopes: ['streams:read', 'streams:write']
-}, accessToken);
-
-// List API keys
-const keys = await api.apiKeys.list({
-  appId: 'app_xyz789'
-}, accessToken);
-
-// Regenerate secret
-const key = await api.apiKeys.regenerate(keyId, accessToken);
-
-// Delete API key
-await api.apiKeys.delete(keyId, accessToken);
-```
-
-#### Webhooks
-
-```typescript
-// Create webhook
-const webhook = await api.webhooks.create({
-  appId: 'app_xyz789',
-  url: 'https://your-app.com/webhooks',
-  events: ['stream.live', 'stream.offline'],
-  secret: 'webhook_secret'
-}, accessToken);
-
-// List webhooks
-const webhooks = await api.webhooks.list({
-  appId: 'app_xyz789'
-}, accessToken);
-
-// Update webhook
-const webhook = await api.webhooks.update(webhookId, {
-  events: ['stream.live', 'stream.offline', 'chat.message.new']
-}, accessToken);
-
-// Delete webhook
-await api.webhooks.delete(webhookId, accessToken);
-```
-
-#### Recordings
-
-```typescript
-// Start recording
-const recording = await api.recordings.start({
-  streamId: 'stream_123',
-  appId: 'app_xyz789',
-  streamUrl: 'rtmp://...',
-  title: 'Recording Title'
-}, accessToken);
-
-// Stop recording
-const recording = await api.recordings.stop(streamId, accessToken);
-
-// List recordings
-const recordings = await api.recordings.list({
-  appId: 'app_xyz789',
-  limit: 50
-}, accessToken);
-
-// Get recording
-const recording = await api.recordings.get(recordingId, accessToken);
-
-// Delete recording
-await api.recordings.delete(recordingId, accessToken);
-```
-
-### RealCastChat
-
-#### Constructor
-
-```typescript
-const chat = new RealCastChat({
-  streamId: string,
-  userId: string,
-  username: string,
-  token: string,
-  serverUrl?: string  // default: wss://realtime.realcast.io
+  offset: 0
 });
 ```
 
-#### Methods
+#### Delete Stream
+```javascript
+await client.streams.delete('stream_id');
+```
 
-```typescript
+### Real-Time Chat
+
+```javascript
+import { RealTimeClient } from '@realcast/sdk';
+
+const rtClient = new RealTimeClient({
+  url: 'https://realtime.realcast.io',
+  auth: {
+    userId: 'user_123',
+    userName: 'John Doe'
+  }
+});
+
+// Connect
+await rtClient.connect();
+
+// Join channel
+await rtClient.joinChannel('stream_abc123');
+
+// Listen for messages
+rtClient.on('message', (data) => {
+  console.log(`${data.userName}: ${data.message}`);
+});
+
 // Send message
-chat.sendMessage(message: string): void
+await rtClient.sendMessage({
+  channelId: 'stream_abc123',
+  message: 'Hello everyone!'
+});
 
-// Send reaction
-chat.sendReaction(emoji: string): void
+// Leave channel
+await rtClient.leaveChannel('stream_abc123');
 
 // Disconnect
-chat.disconnect(): void
+await rtClient.disconnect();
 ```
 
-#### Events
+### Analytics
 
-```typescript
-// Chat events
-chat.on('connect', () => { ... });
-chat.on('disconnect', () => { ... });
-chat.on('message', (data) => { ... });
-chat.on('typing', (data) => { ... });
-chat.on('reaction', (data) => { ... });
+```javascript
+// Get overview
+const analytics = await client.analytics.getOverview({
+  appId: 'app_id',
+  days: 7
+});
 
-// Stream events
-chat.on('stream:live', (data) => { ... });
-chat.on('stream:offline', (data) => { ... });
-chat.on('viewer:count', (data) => { ... });
+console.log('Total streams:', analytics.streams.total);
+console.log('Total views:', analytics.viewers.totalViews);
 
-// Moderation events
-chat.on('user:banned', (data) => { ... });
-chat.on('user:muted', (data) => { ... });
-chat.on('message:deleted', (data) => { ... });
+// Get bandwidth usage
+const bandwidth = await client.analytics.getBandwidth({
+  appId: 'app_id',
+  days: 30
+});
+
+console.log('Bandwidth used:', bandwidth.totalBandwidthGb, 'GB');
 ```
 
-## Examples
+### Webhooks
 
-### Complete Integration Example
+```javascript
+// Create webhook
+const webhook = await client.webhooks.create({
+  appId: 'app_id',
+  url: 'https://yourapp.com/webhooks',
+  events: ['stream.live', 'stream.offline', 'viewer.joined'],
+  enabled: true
+});
 
-```typescript
-import { RealCastAPI, RealCastChat } from '@realcast/sdk';
+// Verify webhook signature
+import { verifyWebhookSignature } from '@realcast/sdk';
 
-class LiveStreamApp {
-  private api: RealCastAPI;
-  private chat: RealCastChat | null = null;
-  
-  constructor(apiKey: string, apiSecret: string) {
-    this.api = new RealCastAPI({ apiKey, apiSecret });
-  }
-  
-  async initialize(userEmail: string, password: string) {
-    // Login
-    const { accessToken, user } = await this.api.auth.login({
-      email: userEmail,
-      password: password
-    });
-    
-    this.accessToken = accessToken;
-    this.user = user;
-    
-    console.log('Logged in as:', user.email);
-  }
-  
-  async createStream(appId: string, title: string) {
-    const stream = await this.api.streams.create({
-      appId,
-      title,
-      description: 'Created via SDK'
-    }, this.accessToken);
-    
-    console.log('Stream created!');
-    console.log('Stream Key:', stream.streamKey);
-    console.log('HLS URL:', stream.hlsUrl);
-    
-    return stream;
-  }
-  
-  initializeChat(streamId: string, username: string) {
-    this.chat = new RealCastChat({
-      streamId,
-      userId: this.user.id,
-      username,
-      token: this.accessToken
-    });
-    
-    this.chat.on('connect', () => {
-      console.log('Chat connected!');
-    });
-    
-    this.chat.on('message', (data) => {
-      console.log(`${data.username}: ${data.message}`);
-    });
-    
-    this.chat.on('viewer:count', (data) => {
-      console.log('Viewers:', data.count);
-    });
-  }
-  
-  sendChatMessage(message: string) {
-    if (this.chat) {
-      this.chat.sendMessage(message);
-    }
-  }
+const isValid = verifyWebhookSignature(
+  payload,
+  signature,
+  webhook.secret
+);
+```
+
+### Recordings
+
+```javascript
+// Start recording
+const recording = await client.recordings.start({
+  streamId: 'stream_id',
+  appId: 'app_id'
+});
+
+// Stop recording
+const result = await client.recordings.stop('stream_id');
+console.log('CDN URL:', result.cdnUrl);
+
+// List recordings
+const recordings = await client.recordings.list({
+  appId: 'app_id',
+  limit: 50
+});
+```
+
+## React Hooks
+
+### useStream
+
+```javascript
+import { useStream } from '@realcast/react';
+
+function StreamComponent({ streamId }) {
+  const { stream, loading, error } = useStream(streamId);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <div>
+      <h1>{stream.title}</h1>
+      <p>Status: {stream.status}</p>
+      <p>Viewers: {stream.viewerCount}</p>
+    </div>
+  );
 }
-
-// Usage
-const app = new LiveStreamApp('your_api_key', 'your_api_secret');
-
-await app.initialize('user@example.com', 'password');
-const stream = await app.createStream('app_xyz789', 'My Live Stream');
-app.initializeChat(stream.id, 'GamerPro');
-app.sendChatMessage('Hello everyone!');
 ```
 
-### Error Handling
+### useChat
 
-```typescript
-try {
-  const stream = await api.streams.create(data, token);
-} catch (error) {
-  if (error.status === 401) {
-    console.error('Unauthorized - check your token');
-  } else if (error.status === 429) {
-    console.error('Rate limited - retry after:', error.retryAfter);
-  } else {
-    console.error('Error:', error.message);
-  }
+```javascript
+import { useChat } from '@realcast/react';
+
+function ChatComponent({ streamId, userId, userName }) {
+  const { messages, sendMessage, isConnected } = useChat({
+    streamId,
+    userId,
+    userName
+  });
+
+  return (
+    <div>
+      <div className="messages">
+        {messages.map(msg => (
+          <div key={msg.id}>
+            <strong>{msg.userName}:</strong> {msg.message}
+          </div>
+        ))}
+      </div>
+      <input 
+        onKeyPress={(e) => {
+          if (e.key === 'Enter') {
+            sendMessage(e.target.value);
+            e.target.value = '';
+          }
+        }}
+        disabled={!isConnected}
+      />
+    </div>
+  );
 }
 ```
 
 ## TypeScript Support
 
-The SDK is written in TypeScript with full type definitions:
+The SDK is written in TypeScript and includes type definitions.
 
 ```typescript
-import type {
-  Stream,
-  StreamCreate,
-  StreamStatus,
-  App,
-  ApiKey,
-  Webhook,
-  Recording
-} from '@realcast/sdk';
+import { RealCastClient, Stream, StreamCreateOptions } from '@realcast/sdk';
+
+const client = new RealCastClient({
+  apiKey: process.env.REALCAST_API_KEY!,
+  apiSecret: process.env.REALCAST_API_SECRET!
+});
+
+const options: StreamCreateOptions = {
+  appId: 'app_123',
+  title: 'My Stream',
+  quality: 'high'
+};
+
+const stream: Stream = await client.streams.create(options);
 ```
+
+## Error Handling
+
+```javascript
+try {
+  const stream = await client.streams.create(options);
+} catch (error) {
+  if (error instanceof RealCastError) {
+    console.error('API Error:', error.message);
+    console.error('Status Code:', error.statusCode);
+    console.error('Error Code:', error.code);
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+## Examples
+
+See the [examples directory](./examples) for complete working examples:
+
+- [Basic Streaming](./examples/basic-streaming.js)
+- [React App](./examples/react-app)
+- [Next.js Integration](./examples/nextjs-app)
+- [Live Chat](./examples/live-chat.js)
+- [Webhook Handler](./examples/webhook-handler.js)
 
 ## License
 

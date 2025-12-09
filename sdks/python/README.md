@@ -5,443 +5,339 @@ Official Python SDK for RealCast PaaS.
 ## Installation
 
 ```bash
-pip install realcast-sdk
+pip install realcast
 ```
 
 ## Quick Start
 
 ```python
-from realcast import RealCastAPI, RealCastChat
+from realcast import RealCastClient
 
-# Initialize API client
-api = RealCastAPI(
-    api_key='your_api_key',
-    api_secret='your_api_secret'
+client = RealCastClient(
+    api_key='ak_live_your_api_key',
+    api_secret='sk_live_your_secret'
 )
 
 # Create a stream
-stream = api.streams.create(
+stream = client.streams.create(
     app_id='app_xyz789',
     title='My Live Stream',
-    description='Gaming session'
+    quality='high'
 )
 
-print(f'Stream Key: {stream["stream_key"]}')
-print(f'HLS URL: {stream["hls_url"]}')
-
-# Initialize chat
-chat = RealCastChat(
-    stream_id=stream['id'],
-    user_id='user_123',
-    username='GamerPro',
-    token='jwt_token'
-)
-
-# Listen for messages
-@chat.on('message')
-def handle_message(data):
-    print(f"{data['username']}: {data['message']}")
-
-# Send message
-chat.send_message('Hello everyone!')
-
-# Start chat client
-chat.connect()
+print(f'Stream created: {stream.stream_key}')
+print(f'Playback URL: {stream.playback_url}')
 ```
 
 ## API Reference
 
-### RealCastAPI
-
-#### Constructor
+### Initialize Client
 
 ```python
-api = RealCastAPI(
+from realcast import RealCastClient
+
+client = RealCastClient(
     api_key='your_api_key',
     api_secret='your_api_secret',
-    base_url='https://api.realcast.io/api'  # optional
+    base_url='https://api.realcast.io/api'  # Optional
 )
 ```
 
-#### Authentication
+### Streams
 
+#### Create Stream
 ```python
-# Register
-user = api.auth.register(
-    email='user@example.com',
-    password='SecurePass123!',
-    full_name='John Doe'
+stream = client.streams.create(
+    app_id='app_id',
+    title='Stream Title',
+    description='Stream Description',
+    quality='high'  # 'low', 'medium', 'high', 'ultra'
 )
-
-# Login
-response = api.auth.login(
-    email='user@example.com',
-    password='SecurePass123!'
-)
-access_token = response['access_token']
-user = response['user']
-
-# Get current user
-user = api.auth.get_current_user(access_token)
 ```
 
-#### Apps
-
+#### Get Stream
 ```python
-# Create app
-app = api.apps.create(
-    name='My App',
-    description='Live streaming app',
-    settings={
-        'recording_enabled': True,
-        'chat_enabled': True
-    },
-    token=access_token
-)
-
-# List apps
-apps = api.apps.list(token=access_token)
-
-# Get app
-app = api.apps.get(app_id, token=access_token)
-
-# Update app
-app = api.apps.update(
-    app_id,
-    name='Updated Name',
-    token=access_token
-)
-
-# Delete app
-api.apps.delete(app_id, token=access_token)
+stream = client.streams.get('stream_id')
+print(f'Status: {stream.status}')
+print(f'Viewers: {stream.viewer_count}')
 ```
 
-#### Streams
-
+#### List Streams
 ```python
-# Create stream
-stream = api.streams.create(
-    app_id='app_xyz789',
-    title='My Stream',
-    description='Stream description',
-    settings={'recording': True},
-    token=access_token
-)
-
-# List streams
-streams = api.streams.list(
-    app_id='app_xyz789',
+streams = client.streams.list(
+    app_id='app_id',
+    status='live',  # Optional: 'live', 'offline', 'all'
     limit=50,
-    skip=0,
-    token=access_token
+    offset=0
 )
 
-# Get stream
-stream = api.streams.get(stream_id, token=access_token)
-
-# Get stream status
-status = api.streams.get_status(stream_id, token=access_token)
-# Returns: {'status': 'live', 'viewer_count': 123, 'started_at': '...'}
-
-# Generate playback token
-token_data = api.streams.generate_playback_token(
-    stream_id,
-    viewer_id='viewer_123',
-    expiry_minutes=60,
-    token=access_token
-)
-
-# Update stream
-stream = api.streams.update(
-    stream_id,
-    title='Updated Title',
-    token=access_token
-)
-
-# Delete stream
-api.streams.delete(stream_id, token=access_token)
+for stream in streams:
+    print(f'{stream.title}: {stream.viewer_count} viewers')
 ```
 
-#### API Keys
+#### Delete Stream
+```python
+client.streams.delete('stream_id')
+```
+
+### Analytics
 
 ```python
-# Create API key
-key = api.api_keys.create(
-    app_id='app_xyz789',
-    name='Production Key',
-    scopes=['streams:read', 'streams:write'],
-    token=access_token
+# Get overview
+analytics = client.analytics.get_overview(
+    app_id='app_id',
+    days=7
 )
 
-# List API keys
-keys = api.api_keys.list(
-    app_id='app_xyz789',
-    token=access_token
+print(f'Total streams: {analytics["streams"]["total"]}')
+print(f'Total views: {analytics["viewers"]["total_views"]}')
+
+# Get bandwidth usage
+bandwidth = client.analytics.get_bandwidth(
+    app_id='app_id',
+    days=30
 )
 
-# Regenerate secret
-key = api.api_keys.regenerate(key_id, token=access_token)
-
-# Delete API key
-api.api_keys.delete(key_id, token=access_token)
+print(f'Bandwidth used: {bandwidth["total_bandwidth_gb"]} GB')
 ```
 
-#### Webhooks
+### Webhooks
 
 ```python
 # Create webhook
-webhook = api.webhooks.create(
-    app_id='app_xyz789',
-    url='https://your-app.com/webhooks',
-    events=['stream.live', 'stream.offline'],
-    secret='webhook_secret',
-    token=access_token
+webhook = client.webhooks.create(
+    app_id='app_id',
+    url='https://yourapp.com/webhooks',
+    events=['stream.live', 'stream.offline', 'viewer.joined'],
+    enabled=True
 )
 
-# List webhooks
-webhooks = api.webhooks.list(
-    app_id='app_xyz789',
-    token=access_token
-)
+# Verify webhook signature
+from realcast import verify_webhook_signature
 
-# Update webhook
-webhook = api.webhooks.update(
-    webhook_id,
-    events=['stream.live', 'stream.offline', 'chat.message.new'],
-    token=access_token
+is_valid = verify_webhook_signature(
+    payload=request.body,
+    signature=request.headers['X-RealCast-Signature'],
+    secret=webhook['secret']
 )
-
-# Delete webhook
-api.webhooks.delete(webhook_id, token=access_token)
 ```
 
-#### Recordings
+### Recordings
 
 ```python
 # Start recording
-recording = api.recordings.start(
-    stream_id='stream_123',
-    app_id='app_xyz789',
-    stream_url='rtmp://...',
-    title='Recording Title',
-    token=access_token
+recording = client.recordings.start(
+    stream_id='stream_id',
+    app_id='app_id'
 )
 
 # Stop recording
-recording = api.recordings.stop(stream_id, token=access_token)
+result = client.recordings.stop('stream_id')
+print(f'CDN URL: {result["cdn_url"]}')
 
 # List recordings
-recordings = api.recordings.list(
-    app_id='app_xyz789',
-    limit=50,
-    token=access_token
+recordings = client.recordings.list(
+    app_id='app_id',
+    limit=50
 )
 
-# Get recording
-recording = api.recordings.get(recording_id, token=access_token)
-
-# Delete recording
-api.recordings.delete(recording_id, token=access_token)
+for rec in recordings:
+    print(f'{rec["title"]}: {rec["duration"]}s')
 ```
 
-### RealCastChat
+## Flask Integration
 
-#### Constructor
+### Webhook Handler
 
 ```python
-chat = RealCastChat(
-    stream_id='stream_123',
-    user_id='user_123',
-    username='GamerPro',
-    token='jwt_token',
-    server_url='wss://realtime.realcast.io'  # optional
+from flask import Flask, request, jsonify
+from realcast import verify_webhook_signature
+import os
+
+app = Flask(__name__)
+WEBHOOK_SECRET = os.environ['REALCAST_WEBHOOK_SECRET']
+
+@app.route('/webhooks/realcast', methods=['POST'])
+def handle_webhook():
+    # Verify signature
+    signature = request.headers.get('X-RealCast-Signature')
+    payload = request.get_data(as_text=True)
+    
+    if not verify_webhook_signature(payload, signature, WEBHOOK_SECRET):
+        return jsonify({'error': 'Invalid signature'}), 401
+    
+    # Process event
+    data = request.json
+    event = data['event']
+    
+    if event == 'stream.live':
+        stream_id = data['data']['stream_id']
+        print(f'Stream {stream_id} went live')
+        # Send notifications, update database, etc.
+    
+    elif event == 'stream.offline':
+        stream_id = data['data']['stream_id']
+        print(f'Stream {stream_id} ended')
+        # Archive stream, send email, etc.
+    
+    return jsonify({'status': 'ok'}), 200
+
+if __name__ == '__main__':
+    app.run(port=3000)
+```
+
+### Stream Monitoring
+
+```python
+import time
+from realcast import RealCastClient
+
+client = RealCastClient(
+    api_key=os.environ['REALCAST_API_KEY'],
+    api_secret=os.environ['REALCAST_API_SECRET']
 )
+
+def monitor_streams(app_id):
+    """Monitor all streams and log viewer counts"""
+    while True:
+        streams = client.streams.list(app_id=app_id, status='live')
+        
+        for stream in streams:
+            print(f'{stream.title}: {stream.viewer_count} viewers')
+            
+            # Alert if viewer count drops
+            if stream.viewer_count < 10:
+                send_alert(f'Low viewer count for {stream.title}')
+        
+        time.sleep(30)  # Check every 30 seconds
+
+if __name__ == '__main__':
+    monitor_streams('app_xyz789')
 ```
 
-#### Methods
+## Django Integration
+
+### Views
 
 ```python
-# Connect to chat
-chat.connect()
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from realcast import verify_webhook_signature
+import json
+import os
 
-# Send message
-chat.send_message('Hello everyone!')
+WEBHOOK_SECRET = os.environ['REALCAST_WEBHOOK_SECRET']
 
-# Send reaction
-chat.send_reaction('👍')
-
-# Disconnect
-chat.disconnect()
+@csrf_exempt
+@require_http_methods(["POST"])
+def realcast_webhook(request):
+    # Verify signature
+    signature = request.headers.get('X-RealCast-Signature')
+    payload = request.body.decode('utf-8')
+    
+    if not verify_webhook_signature(payload, signature, WEBHOOK_SECRET):
+        return JsonResponse({'error': 'Invalid signature'}, status=401)
+    
+    # Process event
+    data = json.loads(payload)
+    event = data['event']
+    
+    if event == 'stream.live':
+        # Handle stream live event
+        stream_id = data['data']['stream_id']
+        Stream.objects.filter(id=stream_id).update(status='live')
+    
+    return JsonResponse({'status': 'ok'})
 ```
 
-#### Event Handlers
+### Models
 
 ```python
-# Using decorator
-@chat.on('message')
-def handle_message(data):
-    print(f"{data['username']}: {data['message']}")
+from django.db import models
 
-@chat.on('viewer:count')
-def handle_viewer_count(data):
-    print(f"Viewers: {data['count']}")
+class Stream(models.Model):
+    id = models.CharField(max_length=255, primary_key=True)
+    app_id = models.CharField(max_length=255)
+    title = models.CharField(max_length=255)
+    status = models.CharField(max_length=50, default='offline')
+    stream_key = models.CharField(max_length=255)
+    playback_url = models.URLField()
+    viewer_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.title
+```
 
-# Using method
-chat.on('stream:live', lambda data: print('Stream started!'))
+## Async Support
+
+```python
+import asyncio
+from realcast import AsyncRealCastClient
+
+async def main():
+    client = AsyncRealCastClient(
+        api_key='your_api_key',
+        api_secret='your_secret'
+    )
+    
+    # Create stream asynchronously
+    stream = await client.streams.create(
+        app_id='app_id',
+        title='Async Stream'
+    )
+    
+    print(f'Stream created: {stream.id}')
+    
+    # Close client
+    await client.close()
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+## Error Handling
+
+```python
+from realcast import RealCastClient, RealCastError, RealCastAPIError
+
+client = RealCastClient(api_key='...', api_secret='...')
+
+try:
+    stream = client.streams.create(
+        app_id='app_id',
+        title='My Stream'
+    )
+except RealCastAPIError as e:
+    print(f'API Error: {e.message}')
+    print(f'Status Code: {e.status_code}')
+    print(f'Error Code: {e.code}')
+except RealCastError as e:
+    print(f'SDK Error: {e}')
+except Exception as e:
+    print(f'Unexpected error: {e}')
 ```
 
 ## Examples
 
-### Complete Integration Example
+See the [examples directory](./examples) for complete working examples:
 
-```python
-from realcast import RealCastAPI, RealCastChat
-import time
+- [Basic Streaming](./examples/basic_streaming.py)
+- [Flask Webhook Handler](./examples/flask_webhooks.py)
+- [Django Integration](./examples/django_app/)
+- [Stream Monitor](./examples/stream_monitor.py)
+- [Async Operations](./examples/async_example.py)
 
-class LiveStreamApp:
-    def __init__(self, api_key, api_secret):
-        self.api = RealCastAPI(api_key=api_key, api_secret=api_secret)
-        self.chat = None
-        self.access_token = None
-        self.user = None
-    
-    def initialize(self, email, password):
-        """Login and initialize"""
-        response = self.api.auth.login(email=email, password=password)
-        self.access_token = response['access_token']
-        self.user = response['user']
-        print(f'Logged in as: {self.user["email"]}')
-    
-    def create_stream(self, app_id, title):
-        """Create a new stream"""
-        stream = self.api.streams.create(
-            app_id=app_id,
-            title=title,
-            description='Created via Python SDK',
-            token=self.access_token
-        )
-        
-        print('Stream created!')
-        print(f'Stream Key: {stream["stream_key"]}')
-        print(f'HLS URL: {stream["hls_url"]}')
-        
-        return stream
-    
-    def initialize_chat(self, stream_id, username):
-        """Initialize chat connection"""
-        self.chat = RealCastChat(
-            stream_id=stream_id,
-            user_id=self.user['id'],
-            username=username,
-            token=self.access_token
-        )
-        
-        @self.chat.on('connect')
-        def on_connect():
-            print('Chat connected!')
-        
-        @self.chat.on('message')
-        def on_message(data):
-            print(f"{data['username']}: {data['message']}")
-        
-        @self.chat.on('viewer:count')
-        def on_viewer_count(data):
-            print(f'Viewers: {data["count"]}')
-        
-        self.chat.connect()
-    
-    def send_chat_message(self, message):
-        """Send a chat message"""
-        if self.chat:
-            self.chat.send_message(message)
+## Testing
 
-# Usage
-app = LiveStreamApp('your_api_key', 'your_api_secret')
+```bash
+# Run tests
+python -m pytest tests/
 
-app.initialize('user@example.com', 'password')
-stream = app.create_stream('app_xyz789', 'My Python Stream')
-app.initialize_chat(stream['id'], 'PythonDev')
-app.send_chat_message('Hello from Python!')
-
-# Keep alive
-try:
-    while True:
-        time.sleep(1)
-except KeyboardInterrupt:
-    app.chat.disconnect()
-    print('Disconnected')
+# Run with coverage
+python -m pytest --cov=realcast tests/
 ```
-
-### Async/Await Support
-
-```python
-import asyncio
-from realcast import AsyncRealCastAPI
-
-async def main():
-    api = AsyncRealCastAPI(api_key='key', api_secret='secret')
-    
-    # All methods are async
-    stream = await api.streams.create(
-        app_id='app_xyz789',
-        title='Async Stream',
-        token=token
-    )
-    
-    print(f'Stream created: {stream["id"]}')
-
-# Run
-asyncio.run(main())
-```
-
-### Error Handling
-
-```python
-from realcast import RealCastAPI, RealCastError
-
-try:
-    stream = api.streams.create(...)
-except RealCastError as e:
-    if e.status_code == 401:
-        print('Unauthorized - check your token')
-    elif e.status_code == 429:
-        print(f'Rate limited - retry after: {e.retry_after}')
-    else:
-        print(f'Error: {e.message}')
-```
-
-## Type Hints
-
-The SDK includes full type hints for better IDE support:
-
-```python
-from realcast import RealCastAPI
-from realcast.types import Stream, App, Recording
-
-def create_and_record_stream(
-    api: RealCastAPI,
-    app_id: str,
-    title: str,
-    token: str
-) -> tuple[Stream, Recording]:
-    stream: Stream = api.streams.create(
-        app_id=app_id,
-        title=title,
-        token=token
-    )
-    
-    recording: Recording = api.recordings.start(
-        stream_id=stream['id'],
-        app_id=app_id,
-        token=token
-    )
-    
-    return stream, recording
-```
-
-## Contributing
-
-Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md).
 
 ## License
 
