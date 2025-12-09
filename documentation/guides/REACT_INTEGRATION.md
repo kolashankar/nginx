@@ -1,524 +1,457 @@
-# React Integration Guide for RealCast
+# React App Integration Guide
 
-Complete guide to integrating RealCast live streaming and chat into your React application.
+## Overview
+
+This guide shows you how to integrate RealCast streaming into your React application.
 
 ---
 
 ## Installation
 
+### Install Dependencies
+
 ```bash
-npm install @realcast/react @realcast/sdk hls.js socket.io-client
-# or
-yarn add @realcast/react @realcast/sdk hls.js socket.io-client
+npm install hls.js socket.io-client axios
+```
+
+Or with yarn:
+```bash
+yarn add hls.js socket.io-client axios
 ```
 
 ---
 
 ## Quick Start
 
-### 1. Setup RealCast Provider
+### 1. Initialize RealCast Client
 
-```jsx
-import { RealCastProvider } from '@realcast/react';
-import App from './App';
+Create a configuration file:
 
-function Root() {
-  return (
-    <RealCastProvider
-      apiKey="your_api_key"
-      apiSecret="your_api_secret"
-      appId="your_app_id"
-    >
-      <App />
-    </RealCastProvider>
-  );
-}
-
-export default Root;
+**`src/config/realcast.js`**
+```javascript
+export const REALCAST_CONFIG = {
+  apiKey: 'ak_live_your_api_key_here',
+  apiSecret: 'sk_live_your_api_secret_here',
+  apiUrl: 'https://api.realcast.io/api',
+  realtimeUrl: 'https://realtime.realcast.io'
+};
 ```
 
-### 2. Use RealCast Hooks
+### 2. Create Video Player Component
 
-```jsx
-import { useRealCast, useStream, useChat } from '@realcast/react';
+**`src/components/VideoPlayer.jsx`**
+```javascript
+import React, { useEffect, useRef, useState } from 'react';
+import Hls from 'hls.js';
 
-function StreamPage() {
-  const { api } = useRealCast();
-  const { stream, createStream, startStream } = useStream();
-  const { messages, sendMessage, viewers } = useChat(stream?.id);
-  
-  const handleCreateStream = async () => {
-    await createStream({
-      title: 'My Live Stream',
-      description: 'React integration demo'
-    });
-  };
-  
+const VideoPlayer = ({ streamUrl, autoPlay = true }) => {
+  const videoRef = useRef(null);
+  const hlsRef = useRef(null);
+  const [isLive, setIsLive] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (Hls.isSupported()) {
+      // HLS.js is supported
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 90
+      });
+
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setIsLive(true);
+        if (autoPlay) {
+          video.play().catch(e => {
+            console.error('Autoplay failed:', e);
+          });
+        }
+      });
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              setError('Network error - retrying...');
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              setError('Media error - recovering...');
+              hls.recoverMediaError();
+              break;
+            default:
+              setError('Fatal error - cannot recover');
+              hls.destroy();
+              break;
+          }
+        }
+      });
+
+      hlsRef.current = hls;
+
+      return () => {
+        hls.destroy();
+      };
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS support (Safari)
+      video.src = streamUrl;
+      video.addEventListener('loadedmetadata', () => {
+        setIsLive(true);
+        if (autoPlay) {
+          video.play();
+        }
+      });
+    } else {
+      setError('HLS not supported in this browser');
+    }
+  }, [streamUrl, autoPlay]);
+
   return (
-    <div>
-      <button onClick={handleCreateStream}>Create Stream</button>
-      {stream && (
-        <div>
-          <h2>{stream.title}</h2>
-          <p>Stream Key: {stream.streamKey}</p>
-          <p>Viewers: {viewers}</p>
+    <div className="video-player">
+      <video
+        ref={videoRef}
+        controls
+        style={{ width: '100%', height: 'auto', backgroundColor: '#000' }}
+      />
+      {error && (
+        <div className="error-message">
+          {error}
+        </div>
+      )}
+      {isLive && (
+        <div className="live-badge">
+          🔴 LIVE
         </div>
       )}
     </div>
   );
-}
+};
+
+export default VideoPlayer;
 ```
 
----
+### 3. Create Chat Component
 
-## Components
+**`src/components/ChatWidget.jsx`**
+```javascript
+import React, { useState, useEffect, useRef } from 'react';
+import io from 'socket.io-client';
+import { REALCAST_CONFIG } from '../config/realcast';
 
-### VideoPlayer Component
+const ChatWidget = ({ streamId, userId, userName }) => {
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
-```jsx
-import { VideoPlayer } from '@realcast/react';
-
-function WatchPage({ streamId }) {
-  return (
-    <VideoPlayer
-      streamId={streamId}
-      autoPlay
-      controls
-      muted={false}
-      onPlay={() => console.log('Playing')}
-      onPause={() => console.log('Paused')}
-      onError={(error) => console.error(error)}
-    />
-  );
-}
-```
-
-### Props
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `streamId` | string | required | Stream ID to play |
-| `autoPlay` | boolean | false | Auto-play on load |
-| `controls` | boolean | true | Show player controls |
-| `muted` | boolean | false | Start muted |
-| `className` | string | '' | CSS class name |
-| `style` | object | {} | Inline styles |
-| `onPlay` | function | - | Play event handler |
-| `onPause` | function | - | Pause event handler |
-| `onError` | function | - | Error handler |
-
-### ChatWidget Component
-
-```jsx
-import { ChatWidget } from '@realcast/react';
-
-function StreamWithChat({ streamId }) {
-  return (
-    <div style={{ display: 'flex' }}>
-      <VideoPlayer streamId={streamId} />
-      <ChatWidget
-        streamId={streamId}
-        username="GamerPro"
-        userId="user_123"
-        maxHeight="600px"
-        theme="dark"
-        onMessageSent={(msg) => console.log('Sent:', msg)}
-      />
-    </div>
-  );
-}
-```
-
-### Props
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `streamId` | string | required | Stream ID |
-| `username` | string | required | User's display name |
-| `userId` | string | required | User ID |
-| `maxHeight` | string | '500px' | Max height of chat |
-| `theme` | 'light' \| 'dark' | 'dark' | Chat theme |
-| `showViewerCount` | boolean | true | Show viewer count |
-| `enableEmojis` | boolean | true | Enable emoji picker |
-| `onMessageSent` | function | - | Message sent callback |
-| `onMessageReceived` | function | - | Message received callback |
-
----
-
-## Hooks
-
-### useRealCast
-
-Access RealCast API client and configuration.
-
-```jsx
-import { useRealCast } from '@realcast/react';
-
-function MyComponent() {
-  const { api, appId, isConnected } = useRealCast();
-  
-  // Use api to make requests
-  const createApp = async () => {
-    const app = await api.apps.create({ name: 'New App' });
-    console.log(app);
-  };
-  
-  return <div>Connected: {isConnected ? 'Yes' : 'No'}</div>;
-}
-```
-
-### useStream
-
-Manage streams.
-
-```jsx
-import { useStream } from '@realcast/react';
-
-function StreamManager() {
-  const {
-    stream,
-    streams,
-    loading,
-    error,
-    createStream,
-    getStream,
-    updateStream,
-    deleteStream,
-    getStatus
-  } = useStream();
-  
-  const handleCreate = async () => {
-    await createStream({
-      title: 'New Stream',
-      description: 'My stream description'
+  useEffect(() => {
+    // Connect to Socket.IO server
+    const socket = io(REALCAST_CONFIG.realtimeUrl, {
+      auth: {
+        userId,
+        userName
+      }
     });
+
+    socket.on('connect', () => {
+      setIsConnected(true);
+      // Join stream chat room
+      socket.emit('join_channel', { channel_id: streamId });
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
+
+    // Listen for chat messages
+    socket.on('chat_message', (data) => {
+      setMessages(prev => [...prev, data]);
+    });
+
+    // Listen for system messages
+    socket.on('system_message', (data) => {
+      setMessages(prev => [...prev, { ...data, isSystem: true }]);
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [streamId, userId, userName]);
+
+  useEffect(() => {
+    // Auto-scroll to bottom
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = (e) => {
+    e.preventDefault();
+    if (!inputMessage.trim() || !isConnected) return;
+
+    socketRef.current.emit('send_message', {
+      channel_id: streamId,
+      message: inputMessage,
+      user_id: userId,
+      user_name: userName
+    });
+
+    setInputMessage('');
   };
-  
-  const handleDelete = async (streamId) => {
-    await deleteStream(streamId);
-  };
-  
+
   return (
-    <div>
-      {loading && <p>Loading...</p>}
-      {error && <p>Error: {error.message}</p>}
-      <button onClick={handleCreate}>Create Stream</button>
-      {streams.map(s => (
-        <div key={s.id}>
-          <h3>{s.title}</h3>
-          <button onClick={() => handleDelete(s.id)}>Delete</button>
-        </div>
-      ))}
-    </div>
-  );
-}
-```
+    <div className="chat-widget" style={{ 
+      height: '500px',
+      display: 'flex',
+      flexDirection: 'column',
+      border: '1px solid #ddd'
+    }}>
+      <div className="chat-header" style={{ 
+        padding: '10px',
+        borderBottom: '1px solid #ddd',
+        backgroundColor: '#f5f5f5'
+      }}>
+        <h3>Live Chat</h3>
+        <span style={{ color: isConnected ? 'green' : 'red' }}>
+          {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+        </span>
+      </div>
 
-### useChat
-
-Manage real-time chat.
-
-```jsx
-import { useChat } from '@realcast/react';
-
-function ChatComponent({ streamId }) {
-  const {
-    messages,
-    viewers,
-    isConnected,
-    sendMessage,
-    sendReaction,
-    typing,
-    startTyping,
-    stopTyping
-  } = useChat(streamId, {
-    userId: 'user_123',
-    username: 'GamerPro'
-  });
-  
-  const [input, setInput] = useState('');
-  
-  const handleSend = () => {
-    sendMessage(input);
-    setInput('');
-  };
-  
-  const handleTyping = () => {
-    startTyping();
-    setTimeout(stopTyping, 3000);
-  };
-  
-  return (
-    <div>
-      <div>Viewers: {viewers}</div>
-      <div>
-        {messages.map(msg => (
-          <div key={msg.id}>
-            <strong>{msg.username}:</strong> {msg.message}
+      <div className="messages" style={{ 
+        flex: 1,
+        overflowY: 'auto',
+        padding: '10px'
+      }}>
+        {messages.map((msg, index) => (
+          <div 
+            key={index} 
+            className={msg.isSystem ? 'system-message' : 'user-message'}
+            style={{ marginBottom: '10px' }}
+          >
+            {msg.isSystem ? (
+              <span style={{ color: '#666', fontStyle: 'italic' }}>
+                {msg.message}
+              </span>
+            ) : (
+              <>
+                <strong>{msg.user_name}:</strong> {msg.message}
+              </>
+            )}
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
-      <input
-        value={input}
-        onChange={(e) => {
-          setInput(e.target.value);
-          handleTyping();
-        }}
-      />
-      <button onClick={handleSend}>Send</button>
-    </div>
-  );
-}
-```
 
-### useRecording
-
-Manage recordings.
-
-```jsx
-import { useRecording } from '@realcast/react';
-
-function RecordingManager({ streamId }) {
-  const {
-    recording,
-    recordings,
-    isRecording,
-    startRecording,
-    stopRecording,
-    deleteRecording
-  } = useRecording(streamId);
-  
-  return (
-    <div>
-      {!isRecording ? (
-        <button onClick={startRecording}>Start Recording</button>
-      ) : (
-        <button onClick={stopRecording}>Stop Recording</button>
-      )}
-      
-      <h3>Recordings</h3>
-      {recordings.map(rec => (
-        <div key={rec.id}>
-          <a href={rec.cdnUrl}>{rec.title}</a>
-          <button onClick={() => deleteRecording(rec.id)}>Delete</button>
+      <form onSubmit={sendMessage} style={{ 
+        padding: '10px',
+        borderTop: '1px solid #ddd'
+      }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder="Type a message..."
+            disabled={!isConnected}
+            style={{ flex: 1, padding: '8px' }}
+          />
+          <button 
+            type="submit"
+            disabled={!isConnected || !inputMessage.trim()}
+            style={{ padding: '8px 16px' }}
+          >
+            Send
+          </button>
         </div>
-      ))}
+      </form>
     </div>
   );
-}
+};
+
+export default ChatWidget;
 ```
 
----
+### 4. Create Stream Page
 
-## Complete Example: Live Streaming App
+**`src/pages/StreamPage.jsx`**
+```javascript
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import VideoPlayer from '../components/VideoPlayer';
+import ChatWidget from '../components/ChatWidget';
+import { REALCAST_CONFIG } from '../config/realcast';
 
-```jsx
-import React, { useState } from 'react';
-import {
-  RealCastProvider,
-  useStream,
-  useChat,
-  VideoPlayer,
-  ChatWidget
-} from '@realcast/react';
+const StreamPage = ({ streamId }) => {
+  const [streamData, setStreamData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [viewerCount, setViewerCount] = useState(0);
 
-function StreamDashboard() {
-  const { stream, createStream, loading } = useStream();
-  const [showPlayer, setShowPlayer] = useState(false);
-  
-  const handleCreateStream = async () => {
-    await createStream({
-      title: 'My React Stream',
-      description: 'Streaming from React app'
-    });
-  };
-  
-  if (loading) return <div>Loading...</div>;
-  
-  if (!stream) {
-    return (
-      <div>
-        <h1>Create Your Stream</h1>
-        <button onClick={handleCreateStream}>Create Stream</button>
-      </div>
-    );
+  useEffect(() => {
+    // Fetch stream data
+    const fetchStream = async () => {
+      try {
+        const response = await axios.get(
+          `${REALCAST_CONFIG.apiUrl}/streams/${streamId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${REALCAST_CONFIG.apiKey}`
+            }
+          }
+        );
+        setStreamData(response.data);
+      } catch (error) {
+        console.error('Error fetching stream:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStream();
+
+    // Poll viewer count every 10 seconds
+    const interval = setInterval(fetchStream, 10000);
+    return () => clearInterval(interval);
+  }, [streamId]);
+
+  if (loading) {
+    return <div>Loading stream...</div>;
   }
-  
+
+  if (!streamData) {
+    return <div>Stream not found</div>;
+  }
+
   return (
-    <div>
-      <h1>Stream Dashboard</h1>
-      
-      <div style={{ background: '#f5f5f5', padding: '20px', marginBottom: '20px' }}>
-        <h2>Stream Configuration</h2>
-        <p><strong>Title:</strong> {stream.title}</p>
-        <p><strong>RTMP URL:</strong> <code>{stream.rtmpUrl}</code></p>
-        <p><strong>Stream Key:</strong> <code>{stream.streamKey}</code></p>
-        <button onClick={() => setShowPlayer(!showPlayer)}>
-          {showPlayer ? 'Hide' : 'Show'} Player
-        </button>
-      </div>
-      
-      {showPlayer && (
-        <div style={{ display: 'flex', gap: '20px' }}>
-          <div style={{ flex: 2 }}>
-            <VideoPlayer
-              streamId={stream.id}
-              autoPlay
-              controls
-            />
-          </div>
-          <div style={{ flex: 1 }}>
-            <ChatWidget
-              streamId={stream.id}
-              username="Streamer"
-              userId="user_123"
-              theme="dark"
-            />
+    <div className="stream-page" style={{ 
+      display: 'grid',
+      gridTemplateColumns: '2fr 1fr',
+      gap: '20px',
+      padding: '20px'
+    }}>
+      <div className="video-section">
+        <VideoPlayer streamUrl={streamData.playback_url} />
+        
+        <div className="stream-info" style={{ marginTop: '20px' }}>
+          <h2>{streamData.title}</h2>
+          <p>{streamData.description}</p>
+          <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+            <span>👥 {streamData.viewer_count || 0} viewers</span>
+            <span>⏱️ {formatDuration(streamData.duration || 0)}</span>
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="chat-section">
+        <ChatWidget 
+          streamId={streamId}
+          userId="user_123"
+          userName="Anonymous User"
+        />
+      </div>
     </div>
   );
+};
+
+function formatDuration(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${minutes}m`;
 }
 
-function App() {
-  return (
-    <RealCastProvider
-      apiKey="your_api_key"
-      apiSecret="your_api_secret"
-      appId="your_app_id"
-    >
-      <StreamDashboard />
-    </RealCastProvider>
-  );
-}
-
-export default App;
+export default StreamPage;
 ```
 
 ---
 
 ## Advanced Features
 
-### Custom Player
+### Quality Selector
 
-Build your own player with low-level hooks:
+```javascript
+const QualitySelector = ({ hls }) => {
+  const [qualities, setQualities] = useState([]);
+  const [currentLevel, setCurrentLevel] = useState(-1);
 
-```jsx
-import { usePlayer } from '@realcast/react';
-import Hls from 'hls.js';
-import { useRef, useEffect } from 'react';
-
-function CustomPlayer({ streamId }) {
-  const videoRef = useRef(null);
-  const { hlsUrl, status } = usePlayer(streamId);
-  
   useEffect(() => {
-    if (!hlsUrl || !videoRef.current) return;
-    
-    const hls = new Hls();
-    hls.loadSource(hlsUrl);
-    hls.attachMedia(videoRef.current);
-    
-    return () => hls.destroy();
-  }, [hlsUrl]);
-  
+    if (hls) {
+      setQualities(hls.levels);
+      setCurrentLevel(hls.currentLevel);
+
+      hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+        setCurrentLevel(data.level);
+      });
+    }
+  }, [hls]);
+
+  const changeQuality = (level) => {
+    hls.currentLevel = level;
+  };
+
   return (
-    <div>
-      <video ref={videoRef} controls autoPlay />
-      <div>Status: {status}</div>
-    </div>
+    <select 
+      value={currentLevel} 
+      onChange={(e) => changeQuality(parseInt(e.target.value))}
+    >
+      <option value={-1}>Auto</option>
+      {qualities.map((level, index) => (
+        <option key={index} value={index}>
+          {level.height}p - {Math.round(level.bitrate / 1000)}kbps
+        </option>
+      ))}
+    </select>
   );
-}
+};
 ```
 
-### Moderation
+### Viewer Analytics
 
-```jsx
-import { useModeration } from '@realcast/react';
+```javascript
+import { useEffect } from 'react';
 
-function ModerationPanel({ streamId }) {
-  const {
-    banUser,
-    unbanUser,
-    muteUser,
-    deleteMessage,
-    setSlowMode
-  } = useModeration(streamId);
-  
-  return (
-    <div>
-      <button onClick={() => banUser('user_123', 3600)}>
-        Ban User (1 hour)
-      </button>
-      <button onClick={() => muteUser('user_123', 300)}>
-        Mute User (5 min)
-      </button>
-      <button onClick={() => setSlowMode(true, 5)}>
-        Enable Slow Mode (5s)
-      </button>
-    </div>
-  );
-}
-```
+const useStreamAnalytics = (streamId) => {
+  useEffect(() => {
+    // Track viewer session
+    const sessionStart = Date.now();
 
-### Analytics
+    // Send analytics on page load
+    axios.post(`${REALCAST_CONFIG.apiUrl}/analytics/view`, {
+      stream_id: streamId,
+      event: 'view_start',
+      timestamp: new Date().toISOString()
+    });
 
-```jsx
-import { useAnalytics } from '@realcast/react';
-
-function AnalyticsDashboard({ streamId }) {
-  const { analytics, loading } = useAnalytics(streamId);
-  
-  if (loading) return <div>Loading analytics...</div>;
-  
-  return (
-    <div>
-      <h2>Stream Analytics</h2>
-      <div>Current Viewers: {analytics.viewers}</div>
-      <div>Peak Viewers: {analytics.peakViewers}</div>
-      <div>Messages/min: {analytics.messagesPerMinute}</div>
-      <div>Avg Watch Time: {analytics.averageWatchTime}s</div>
-    </div>
-  );
-}
+    // Send analytics on page unload
+    return () => {
+      const watchTime = Math.floor((Date.now() - sessionStart) / 1000);
+      axios.post(`${REALCAST_CONFIG.apiUrl}/analytics/view`, {
+        stream_id: streamId,
+        event: 'view_end',
+        watch_time: watchTime,
+        timestamp: new Date().toISOString()
+      });
+    };
+  }, [streamId]);
+};
 ```
 
 ---
 
-## TypeScript Support
+## Next Steps
 
-```typescript
-import { RealCastProvider, useStream, useChat } from '@realcast/react';
-import type { Stream, ChatMessage } from '@realcast/sdk';
-
-function TypedComponent() {
-  const { stream }: { stream: Stream | null } = useStream();
-  const { messages }: { messages: ChatMessage[] } = useChat(stream?.id);
-  
-  return (
-    <div>
-      {stream && <h1>{stream.title}</h1>}
-    </div>
-  );
-}
-```
-
----
-
-## Best Practices
-
-1. **Use RealCastProvider at the root** - Wrap your app for global access
-2. **Handle loading states** - Show spinners while data loads
-3. **Implement error boundaries** - Catch and display errors gracefully
-4. **Optimize re-renders** - Use React.memo for heavy components
-5. **Clean up connections** - Chat disconnects automatically on unmount
-6. **Secure credentials** - Never expose API keys in client code
+- [Configure Webhooks](./WEBHOOKS.md)
+- [Setup OBS Streaming](./OBS_SETUP.md)
+- [View API Documentation](../API.md)
 
 ---
 
 ## Support
 
-- Documentation: https://docs.realcast.io/react
-- Examples: https://github.com/realcast/examples/react
-- Discord: https://discord.gg/realcast
+Need help?
+- Email: support@realcast.io
+- Docs: https://docs.realcast.io

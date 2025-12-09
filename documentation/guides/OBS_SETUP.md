@@ -1,43 +1,28 @@
-# OBS Studio Setup Guide for RealCast
+# OBS Studio Setup Guide
 
-Complete guide to streaming to RealCast using OBS Studio.
+## Overview
+
+This guide will walk you through setting up OBS Studio to stream to your RealCast PaaS app.
 
 ---
 
 ## Prerequisites
 
-- OBS Studio 28.0 or higher ([Download](https://obsproject.com/))
-- RealCast account with an active app
-- Stream key from RealCast
+1. **OBS Studio** installed ([Download here](https://obsproject.com/))
+2. **RealCast Account** with an app created
+3. **Stream Key** from your RealCast dashboard
 
 ---
 
 ## Step 1: Get Your Stream Credentials
 
-### Via Dashboard
-
-1. Login to [RealCast Dashboard](https://dashboard.realcast.io)
-2. Navigate to your App
-3. Click "Streams" tab
-4. Click "Create Stream"
-5. Copy the **Stream Key** and **RTMP URL**
-
-### Via API
-
-```bash
-curl -X POST https://api.realcast.io/api/streams \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "app_id": "your_app_id",
-    "title": "My Stream",
-    "description": "Live from OBS"
-  }'
-```
-
-Save these values:
-- **RTMP URL:** `rtmps://ingest.realcast.io/live`
-- **Stream Key:** `app_xyz789_stream_qwe456_sk_abc123...`
+1. Log in to your [RealCast Dashboard](https://dashboard.realcast.io)
+2. Navigate to **Apps** → Select your app
+3. Go to **Streams** tab
+4. Click **Create New Stream**
+5. Copy your credentials:
+   - **Ingest URL:** `rtmps://ingest.realcast.io/live`
+   - **Stream Key:** `live_abc123_def456`
 
 ---
 
@@ -46,269 +31,198 @@ Save these values:
 ### Open Settings
 
 1. Launch OBS Studio
-2. Click **File** > **Settings** (or **OBS** > **Preferences** on Mac)
+2. Click **Settings** in the bottom right
 3. Navigate to **Stream** tab
 
 ### Configure Stream Settings
 
-1. **Service:** Select `Custom...`
-2. **Server:** Enter `rtmps://ingest.realcast.io/live`
+1. **Service:** Select "Custom..."
+2. **Server:** Enter your ingest URL
+   ```
+   rtmps://ingest.realcast.io/live
+   ```
 3. **Stream Key:** Paste your stream key
-4. Click **OK**
-
-![OBS Stream Settings](https://docs.realcast.io/images/obs-stream-settings.png)
-
----
-
-## Step 3: Optimize Output Settings
-
-### For Gaming (High Quality)
-
-1. Go to **Settings** > **Output**
-2. Set **Output Mode** to `Advanced`
-3. **Streaming** tab:
-   - **Encoder:** NVIDIA NVENC H.264 (GPU) or x264 (CPU)
-   - **Rate Control:** CBR
-   - **Bitrate:** 6000 Kbps (for 1080p60)
-   - **Keyframe Interval:** 2 seconds
-   - **Preset:** Quality (NVENC) or veryfast (x264)
-   - **Profile:** high
-   - **GPU:** 0 (if using NVENC)
-
-### For Standard Streaming
-
-- **1080p30:** 4500-5000 Kbps
-- **720p60:** 4500-6000 Kbps
-- **720p30:** 2500-4000 Kbps
-- **480p30:** 1000-2000 Kbps
+   ```
+   live_abc123_def456
+   ```
+4. Click **OK** to save
 
 ---
 
-## Step 4: Audio Settings
+## Step 3: Configure Output Settings
 
-1. Go to **Settings** > **Audio**
+### Video Quality Settings
+
+1. Go to **Settings** → **Output**
+2. Set **Output Mode** to "Advanced"
+3. In the **Streaming** tab:
+
+**Recommended Settings:**
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| Encoder | x264 or NVENC | Use NVENC if you have NVIDIA GPU |
+| Rate Control | CBR | Constant bitrate for stable quality |
+| Bitrate | 4500-6000 Kbps | Depends on your upload speed |
+| Keyframe Interval | 2 seconds | Required for HLS segmentation |
+| CPU Preset | veryfast | Balance between quality and CPU usage |
+| Profile | high | Better quality |
+
+### Audio Settings
+
+1. Go to **Settings** → **Audio**
 2. **Sample Rate:** 48 kHz
 3. **Channels:** Stereo
-4. **Desktop Audio:** Select your system audio
-5. **Mic/Auxiliary Audio:** Select your microphone
-
-### Audio Bitrate
-
-1. Go to **Settings** > **Output** > **Audio**
-2. Set **Audio Bitrate** to:
-   - 160 kbps (recommended)
-   - 192 kbps (high quality)
-   - 128 kbps (bandwidth limited)
 
 ---
 
-## Step 5: Video Settings
+## Step 4: Test Your Setup
 
-1. Go to **Settings** > **Video**
-2. **Base (Canvas) Resolution:** Your monitor resolution
-3. **Output (Scaled) Resolution:** 
-   - 1920x1080 (Full HD)
-   - 1280x720 (HD)
-4. **Downscale Filter:** Lanczos (best quality)
-5. **FPS:** 
-   - 60 (gaming, fast motion)
-   - 30 (standard content)
+### Start Streaming
 
----
+1. Click **Start Streaming** in OBS
+2. Wait 5-10 seconds for the stream to initialize
+3. Check your RealCast dashboard - status should show **"Live"**
 
-## Step 6: Scene Setup
+### Verify Stream Quality
 
-### Basic Scene
-
-1. Click **+** in the **Scenes** panel
-2. Name it "Main Scene"
-3. Add sources:
-   - **Game Capture** - For games
-   - **Display Capture** - For screen sharing
-   - **Window Capture** - For specific windows
-   - **Video Capture Device** - For webcam
-   - **Image** - For overlays
-   - **Text** - For labels
-
-### Gaming Scene Example
-
-```
-Sources (top to bottom):
-1. Text - Stream Title
-2. Image - Overlay/Frame
-3. Video Capture Device - Webcam (corner)
-4. Game Capture - Your game
-5. Image - Background
-```
-
----
-
-## Step 7: Start Streaming
-
-1. Click **Start Streaming** button
-2. OBS will connect to RealCast
-3. Check for "green square" indicator (streaming active)
-4. Monitor stats in OBS status bar:
-   - **CPU usage**
-   - **FPS**
-   - **Dropped frames**
-   - **Bitrate**
-
-### Verify Stream is Live
-
-```bash
-curl -X GET https://api.realcast.io/api/streams/YOUR_STREAM_ID/status \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-Response should show:
-```json
-{
-  "status": "live",
-  "viewer_count": 0,
-  "started_at": "2024-12-09T10:00:00Z"
-}
-```
+1. Open your playback URL in a browser:
+   ```
+   https://cdn.realcast.io/hls/stream_abc123.m3u8
+   ```
+2. Use a player like VLC or your app's embedded player
+3. Check for:
+   - Clear video (no pixelation)
+   - Smooth playback (no buffering)
+   - Synchronized audio
 
 ---
 
 ## Troubleshooting
 
-### Connection Failed
+### Stream Won't Connect
 
-**Error:** "Failed to connect to server"
+**Issue:** "Connection Failed" or "Unable to connect"
 
 **Solutions:**
-1. Verify RTMP URL is `rtmps://ingest.realcast.io/live`
-2. Check stream key is correct
-3. Ensure port 1935 is not blocked by firewall
-4. Try switching to `rtmp://` (non-secure) temporarily
-5. Check internet connection
+1. Verify your stream key is correct
+2. Check your internet connection
+3. Ensure port 1935 (RTMP) is not blocked by firewall
+4. Try using non-secure RTMP first: `rtmp://ingest.realcast.io/live`
+
+### Poor Stream Quality
+
+**Issue:** Pixelation or choppy video
+
+**Solutions:**
+1. Lower your bitrate (try 3000 Kbps)
+2. Change CPU preset to "faster" or "veryfast"
+3. Check your upload speed (minimum 5 Mbps recommended)
+4. Close bandwidth-intensive applications
+
+### Audio Out of Sync
+
+**Issue:** Audio delayed or ahead of video
+
+**Solutions:**
+1. Add audio sync offset in OBS:
+   - Right-click audio source → **Advanced Audio Properties**
+   - Adjust **Sync Offset** (usually -200ms to +200ms)
+2. Ensure audio sample rate is 48 kHz
 
 ### High CPU Usage
 
-**Solutions:**
-1. Switch to GPU encoder (NVENC/QuickSync)
-2. Lower output resolution
-3. Reduce frame rate to 30 FPS
-4. Change x264 preset to `veryfast` or `ultrafast`
-5. Close unnecessary applications
-
-### Dropped Frames
+**Issue:** OBS consuming too much CPU
 
 **Solutions:**
-1. Lower bitrate by 1000-2000 Kbps
-2. Check upload speed (should be 2x your bitrate)
-3. Close bandwidth-heavy applications
-4. Use wired connection instead of WiFi
-5. Switch to lower resolution
-
-### Lag or Buffering for Viewers
-
-**Solutions:**
-1. Lower bitrate
-2. Set keyframe interval to exactly 2 seconds
-3. Check if upload speed is stable
-4. Restart stream
-
-### Black Screen in Stream
-
-**Solutions:**
-1. Run OBS as Administrator (Windows)
-2. Use Display Capture instead of Game Capture
-3. Update GPU drivers
-4. Check game capture properties:
-   - Mode: "Capture specific window"
-   - Select your game
-5. Try Window Capture mode
+1. Use NVENC encoder (NVIDIA) or QuickSync (Intel)
+2. Lower resolution (1080p → 720p)
+3. Change preset to "ultrafast"
+4. Reduce frame rate (60fps → 30fps)
 
 ---
 
-## Advanced Settings
+## Advanced Configuration
 
 ### Multi-Bitrate Streaming
 
 RealCast automatically transcodes your stream to multiple qualities:
-- 1080p (source quality)
-- 720p
-- 480p
-- 360p
+- 1080p @ 6000 Kbps
+- 720p @ 3000 Kbps
+- 480p @ 1500 Kbps
+- 360p @ 800 Kbps
 
-Viewers can choose based on their connection.
+Just stream at your highest quality, and viewers will automatically get the best quality for their connection.
 
-### Recording While Streaming
+### Custom Overlays and Scenes
 
-1. Go to **Settings** > **Output**
-2. **Recording** tab:
-   - **Recording Path:** Choose folder
-   - **Recording Format:** MP4 or MKV
-   - **Encoder:** Same as streaming (less CPU) or separate
-3. Click **Start Recording** alongside streaming
+1. Add text, images, or browser sources
+2. Create multiple scenes for different content
+3. Use Studio Mode for seamless transitions
 
-### Multistreaming
+### Recording Locally While Streaming
 
-Stream to RealCast and other platforms simultaneously:
-
-1. Install **OBS-VirtualCam** plugin
-2. Use **Restream.io** or **Castr** service
-3. Or set up multiple RTMP outputs via Advanced Scene Switcher
-
----
-
-## Recommended Plugins
-
-### Essential Plugins
-
-1. **StreamFX** - Advanced effects and filters
-2. **Source Clone** - Duplicate sources
-3. **Move Transition** - Smooth scene transitions
-4. **NDI Plugin** - Network sources
-
-### Install Plugins
-
-1. Download from [OBS Forums](https://obsproject.com/forum/resources/)
-2. Close OBS
-3. Run plugin installer
-4. Restart OBS
+1. Go to **Settings** → **Output**
+2. In the **Recording** tab:
+   - **Recording Path:** Choose save location
+   - **Recording Format:** MP4 (recommended)
+   - **Recording Quality:** Same as stream
+3. Click **Start Recording** alongside **Start Streaming**
 
 ---
 
 ## Best Practices
 
-### Pre-Stream Checklist
+### Before Going Live
 
-- [ ] Test stream for 5 minutes before going live
-- [ ] Check audio levels (not clipping)
-- [ ] Verify microphone is unmuted
-- [ ] Test all scenes and transitions
+- [ ] Test audio levels (should be around -12dB to -6dB)
+- [ ] Check camera focus and lighting
+- [ ] Test with a private stream first
 - [ ] Have backup internet connection ready
-- [ ] Close unnecessary applications
-- [ ] Set "Do Not Disturb" mode
+- [ ] Monitor CPU and GPU usage
 
 ### During Stream
 
-- Monitor OBS stats (CPU, dropped frames)
-- Watch chat for viewer feedback
-- Keep backup recordings
-- Have emergency "Be Right Back" scene ready
+- [ ] Monitor bitrate stability in OBS stats
+- [ ] Watch dropped frames (should be <1%)
+- [ ] Keep an eye on viewer count in dashboard
+- [ ] Respond to chat if enabled
 
 ### After Stream
 
-- Stop recording and streaming
-- Save local recording backup
-- Review stream analytics
-- Check for VOD on RealCast
+- [ ] Stop streaming properly (don't force quit)
+- [ ] Review stream analytics in dashboard
+- [ ] Download VOD if recording was enabled
+- [ ] Check webhook logs for any issues
+
+---
+
+## Recommended Internet Speeds
+
+| Quality | Resolution | Bitrate | Upload Speed Required |
+|---------|------------|---------|----------------------|
+| Low | 480p | 1.5 Mbps | 3 Mbps |
+| Medium | 720p | 3 Mbps | 5 Mbps |
+| High | 1080p 30fps | 4.5 Mbps | 7 Mbps |
+| Ultra | 1080p 60fps | 6 Mbps | 10 Mbps |
+| 4K | 2160p | 20 Mbps | 30 Mbps |
+
+*Note: Always have 2x the bitrate for stable streaming*
+
+---
+
+## Next Steps
+
+- [Embed Player in Your Website](./REACT_INTEGRATION.md)
+- [Configure Webhooks](./WEBHOOKS.md)
+- [Monitor Stream Analytics](../API.md#analytics)
+- [Enable Recording & VOD](../API.md#recordings--vod)
 
 ---
 
 ## Support
 
-Need help?
-
-- RealCast Discord: https://discord.gg/realcast
-- OBS Forums: https://obsproject.com/forum/
+Need help? Contact us:
 - Email: support@realcast.io
-
----
-
-**Happy Streaming!** 🎉
+- Discord: [RealCast Community](https://discord.gg/realcast)
+- Docs: https://docs.realcast.io
